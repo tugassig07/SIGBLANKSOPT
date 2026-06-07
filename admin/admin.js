@@ -1,9 +1,9 @@
 // ============================================
 // ADMIN PANEL - DIRECT SYNC TO GOOGLE SHEETS
-// FIXED VERSION - NO FAILED TO FETCH
+// USING GET METHOD FOR STABILITY
 // ============================================
 
-let API_URL = 'https://script.google.com/macros/s/AKfycbzj2DbZa8ugSEifHlveHbRljZkEJYXIQfM1OjnBWDsuxKJxMmPLyM_-ITuUJqdwKMrPXw/exec';
+let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
 let pointsData = [];
 let isLoading = false;
 
@@ -64,22 +64,35 @@ document.querySelectorAll('.menu-item').forEach(item => {
     });
 });
 
-// ========== HELPER FUNCTION FOR FETCH WITH TIMEOUT ==========
-async function fetchWithTimeout(url, options, timeout = 30000) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeout);
-    
+// ========== HELPER FUNCTION ==========
+async function callApi(action, data = null, id = null) {
     try {
+        let url = `${API_URL}?action=${action}&t=${Date.now()}`;
+        
+        if (data && (action === 'add' || action === 'update')) {
+            url += `&data=${encodeURIComponent(JSON.stringify(data))}`;
+        }
+        
+        if (id && action === 'delete') {
+            url += `&id=${id}`;
+        }
+        
+        console.log(`Calling API: ${url.substring(0, 150)}...`);
+        
         const response = await fetch(url, {
-            ...options,
-            signal: controller.signal,
+            method: 'GET',
             mode: 'cors',
-            credentials: 'omit'
+            cache: 'no-cache'
         });
-        clearTimeout(id);
-        return response;
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        return result;
     } catch (error) {
-        clearTimeout(id);
+        console.error('API call error:', error);
         throw error;
     }
 }
@@ -91,43 +104,30 @@ async function loadDataFromSheets() {
     addLog('📥 Mengambil data dari Google Sheets...', 'info');
     
     try {
-        const url = `${API_URL}?action=getData&t=${Date.now()}`;
-        addLog(`🌐 Fetching: ${url.substring(0, 80)}...`, 'info');
+        const result = await callApi('getData');
         
-        const response = await fetchWithTimeout(url, { method: 'GET' }, 30000);
-        
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data) {
-                pointsData = result.data.map(item => ({
-                    id: parseInt(item.id),
-                    dusun: item.dusun || '',
-                    desa: item.desa || '',
-                    kec: item.kec || '',
-                    status: item.status || 'blank',
-                    lat: parseFloat(item.lat) || 0,
-                    lng: parseFloat(item.lng) || 0,
-                    populasi: parseInt(item.populasi) || 0,
-                    provider: item.provider || '',
-                    rssi: item.rssi || -70,
-                    elev: item.elev || 0,
-                    ket: item.ket || ''
-                }));
-                addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
-            } else {
-                pointsData = [];
-                addLog('📭 Data kosong dari Google Sheets', 'info');
-            }
+        if (result.success && result.data) {
+            pointsData = result.data.map(item => ({
+                id: parseInt(item.id),
+                dusun: item.dusun || '',
+                desa: item.desa || '',
+                kec: item.kec || '',
+                status: item.status || 'blank',
+                lat: parseFloat(item.lat) || 0,
+                lng: parseFloat(item.lng) || 0,
+                populasi: parseInt(item.populasi) || 0,
+                provider: item.provider || '',
+                rssi: item.rssi || -70,
+                elev: item.elev || 0,
+                ket: item.ket || ''
+            }));
+            addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            pointsData = [];
+            addLog('📭 Data kosong dari Google Sheets', 'info');
         }
     } catch (error) {
-        console.error('Load data error:', error);
-        if (error.name === 'AbortError') {
-            addLog('❌ Timeout: Server tidak merespon', 'error');
-        } else {
-            addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
-        }
+        addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
         pointsData = [];
     }
     
@@ -200,45 +200,34 @@ function updateLastSync() {
     document.getElementById('lastSyncTime').innerHTML = last ? new Date(last).toLocaleString() : '-';
 }
 
-// ========== CRUD OPERATIONS (FIXED) ==========
+// ========== CRUD OPERATIONS (USING GET) ==========
 async function addPoint(data) {
     addLog(`➕ Menambahkan titik: ${data.dusun}...`, 'info');
     
     try {
-        const payload = {
-            action: 'add',
-            data: data
+        // Generate ID baru
+        const maxId = pointsData.length > 0 ? Math.max(...pointsData.map(p => p.id)) : 0;
+        const newId = maxId + 1;
+        
+        const newData = {
+            ...data,
+            id: newId,
+            rssi: data.rssi || -70,
+            elev: data.elev || 0,
+            ket: data.ket || ''
         };
         
-        addLog(`📤 Sending to: ${API_URL}`, 'info');
+        const result = await callApi('add', newData);
         
-        const response = await fetchWithTimeout(API_URL, {
-            method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-        }, 30000);
-        
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                addLog(`✅ Titik "${data.dusun}" berhasil ditambahkan`, 'success');
-                await loadDataFromSheets();
-                return true;
-            } else {
-                throw new Error(result.message || 'Gagal menambahkan');
-            }
+        if (result.success) {
+            addLog(`✅ Titik "${data.dusun}" berhasil ditambahkan (ID: ${newId})`, 'success');
+            await loadDataFromSheets();
+            return true;
         } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            throw new Error(result.message || 'Gagal menambahkan');
         }
     } catch (error) {
-        console.error('Add point error:', error);
-        if (error.name === 'AbortError') {
-            addLog(`❌ Timeout: Server tidak merespon saat menambah "${data.dusun}"`, 'error');
-        } else {
-            addLog(`❌ Gagal menambahkan "${data.dusun}": ${error.message}`, 'error');
-        }
+        addLog(`❌ Gagal menambahkan: ${error.message}`, 'error');
         return false;
     }
 }
@@ -264,35 +253,25 @@ async function updatePoint(id, data) {
     addLog(`✏️ Mengupdate titik ID: ${id}...`, 'info');
     
     try {
-        const payload = {
-            action: 'update',
-            data: { id, ...data }
+        const updateData = {
+            id: id,
+            ...data,
+            rssi: data.rssi || -70,
+            elev: data.elev || 0,
+            ket: data.ket || ''
         };
         
-        const response = await fetchWithTimeout(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }, 30000);
+        const result = await callApi('update', updateData);
         
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                addLog(`✅ Titik "${data.dusun}" berhasil diupdate`, 'success');
-                await loadDataFromSheets();
-                return true;
-            } else {
-                throw new Error(result.message || 'Gagal mengupdate');
-            }
+        if (result.success) {
+            addLog(`✅ Titik "${data.dusun}" berhasil diupdate`, 'success');
+            await loadDataFromSheets();
+            return true;
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(result.message || 'Gagal mengupdate');
         }
     } catch (error) {
-        if (error.name === 'AbortError') {
-            addLog(`❌ Timeout: Server tidak merespon saat update`, 'error');
-        } else {
-            addLog(`❌ Gagal mengupdate: ${error.message}`, 'error');
-        }
+        addLog(`❌ Gagal mengupdate: ${error.message}`, 'error');
         return false;
     }
 }
@@ -305,58 +284,18 @@ async function deletePoint(id) {
     addLog(`🗑️ Menghapus titik: ${pointName}...`, 'info');
     
     try {
-        // Try both methods: JSON and URL-encoded
-        let response;
+        const result = await callApi('delete', null, id);
         
-        // Method 1: Try JSON first
-        try {
-            const payload = {
-                action: 'delete',
-                id: id
-            };
-            
-            response = await fetchWithTimeout(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }, 30000);
-        } catch (jsonError) {
-            addLog(`⚠️ JSON method failed, trying URL encoded...`, 'warning');
-            
-            // Method 2: Fallback to URL encoded
-            const formData = new URLSearchParams();
-            formData.append('action', 'delete');
-            formData.append('id', id.toString());
-            
-            response = await fetchWithTimeout(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData.toString()
-            }, 30000);
-        }
-        
-        if (response && response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                addLog(`✅ Titik "${pointName}" berhasil dihapus dari Google Sheets`, 'success');
-                // Refresh data after delete
-                await loadDataFromSheets();
-                return true;
-            } else {
-                throw new Error(result.message || 'Gagal menghapus dari server');
-            }
+        if (result.success) {
+            addLog(`✅ Titik "${pointName}" berhasil dihapus dari Google Sheets`, 'success');
+            await loadDataFromSheets();
+            return true;
         } else {
-            throw new Error(response ? `HTTP ${response.status}` : 'No response');
+            throw new Error(result.message || 'Gagal menghapus');
         }
     } catch (error) {
-        console.error('Delete error:', error);
-        if (error.name === 'AbortError') {
-            addLog(`❌ Timeout: Server tidak merespon saat menghapus "${pointName}"`, 'error');
-        } else {
-            addLog(`❌ Gagal menghapus "${pointName}": ${error.message}`, 'error');
-        }
+        addLog(`❌ Gagal menghapus "${pointName}": ${error.message}`, 'error');
         
-        // Offer to retry
         if (confirm(`Gagal menghapus "${pointName}". Ingin mencoba lagi?`)) {
             return deletePoint(id);
         }
@@ -368,32 +307,22 @@ async function deletePoint(id) {
 async function testConnection() {
     addLog('🔌 Testing connection to Google Sheets...', 'info');
     try {
-        const url = `${API_URL}?action=test&t=${Date.now()}`;
-        const response = await fetchWithTimeout(url, { method: 'GET' }, 15000);
+        const result = await callApi('test');
         
-        if (response.ok) {
-            const result = await response.json();
-            if (result.success) {
-                addLog('✅ Connection successful!', 'success');
-                const connStatus = document.getElementById('connStatus');
-                if (connStatus) {
-                    connStatus.innerHTML = '✅ Terhubung';
-                    connStatus.style.background = '#d1fae5';
-                    connStatus.style.color = '#059669';
-                }
-                return true;
-            } else {
-                throw new Error(result.message || 'Connection failed');
+        if (result.success) {
+            addLog(`✅ Connection successful! (${result.data?.rowCount || 0} records)`, 'success');
+            const connStatus = document.getElementById('connStatus');
+            if (connStatus) {
+                connStatus.innerHTML = '✅ Terhubung';
+                connStatus.style.background = '#d1fae5';
+                connStatus.style.color = '#059669';
             }
-        }
-        throw new Error(`HTTP ${response.status}`);
-    } catch(e) {
-        console.error('Test connection error:', e);
-        if (e.name === 'AbortError') {
-            addLog('❌ Connection timeout: Server tidak merespon', 'error');
+            return true;
         } else {
-            addLog(`❌ Connection failed: ${e.message}`, 'error');
+            throw new Error(result.message || 'Connection failed');
         }
+    } catch(e) {
+        addLog(`❌ Connection failed: ${e.message}`, 'error');
         const connStatus = document.getElementById('connStatus');
         if (connStatus) {
             connStatus.innerHTML = '❌ Gagal';
@@ -424,32 +353,17 @@ async function pushData() {
     
     for (const point of pointsData) {
         try {
-            const payload = {
-                action: 'add',
-                data: point
-            };
+            const result = await callApi('add', point);
             
-            const response = await fetchWithTimeout(API_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            }, 15000);
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    success++;
-                    addLog(`✅ Push ${point.dusun} berhasil`, 'success');
-                } else {
-                    failed++;
-                    addLog(`⚠️ Push ${point.dusun} gagal: ${result.message}`, 'warning');
-                }
+            if (result.success) {
+                success++;
+                addLog(`✅ Push ${point.dusun} berhasil`, 'success');
             } else {
                 failed++;
-                addLog(`⚠️ Push ${point.dusun} gagal: HTTP ${response.status}`, 'warning');
+                addLog(`⚠️ Push ${point.dusun} gagal: ${result.message}`, 'warning');
             }
             
-            await new Promise(r => setTimeout(r, 300));
+            await new Promise(r => setTimeout(r, 500));
         } catch(e) {
             failed++;
             addLog(`❌ Gagal push ${point.dusun}: ${e.message}`, 'error');
@@ -472,9 +386,7 @@ async function addSampleData() {
         { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel', rssi: -95, elev: 45, ket: 'Area perbukitan, sinyal sangat lemah' },
         { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL', rssi: -85, elev: 52, ket: 'Jarak jauh dari BTS' },
         { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat', rssi: -75, elev: 48, ket: 'Sinyal cukup stabil' },
-        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel', rssi: -65, elev: 50, ket: 'Area pemukiman padat, sinyal baik' },
-        { dusun: 'Dk. Cepoko', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.100, lng: 111.620, populasi: 580, provider: '-', rssi: -99, elev: 60, ket: 'Lembah, tidak ada sinyal' },
-        { dusun: 'Dk. Mulyo', desa: 'Kasiman', kec: 'Kasiman', status: 'lemah', lat: -7.120, lng: 111.650, populasi: 940, provider: 'Telkomsel', rssi: -88, elev: 42, ket: 'Sinyal tidak stabil' }
+        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel', rssi: -65, elev: 50, ket: 'Area pemukiman padat, sinyal baik' }
     ];
     
     addLog('📝 Menambahkan sample data...', 'info');
@@ -516,9 +428,8 @@ function changePassword() {
         return;
     }
     
-    // In production, you'd want to hash this
     localStorage.setItem('adminPassword', newPass);
-    addLog('✅ Password berhasil diubah (akan berlaku setelah login ulang)', 'success');
+    addLog('✅ Password berhasil diubah', 'success');
     document.getElementById('oldPass').value = '';
     document.getElementById('newPass').value = '';
     document.getElementById('confirmPass').value = '';
@@ -555,11 +466,14 @@ if (pointForm) {
             lat: parseFloat(document.getElementById('lat').value),
             lng: parseFloat(document.getElementById('lng').value),
             populasi: parseInt(document.getElementById('populasi').value) || 0,
-            provider: document.getElementById('provider').value,
-            rssi: -70,
-            elev: 0,
-            ket: ''
+            provider: document.getElementById('provider').value
         };
+        
+        // Validate required fields
+        if (!data.dusun || !data.desa || !data.lat || !data.lng) {
+            addLog('❌ Harap isi semua field yang diperlukan (Dusun, Desa, Latitude, Longitude)', 'error');
+            return;
+        }
         
         if (id) {
             await updatePoint(id, data);
@@ -630,7 +544,6 @@ if (savedUrl) API_URL = savedUrl;
 const apiUrlInput = document.getElementById('apiUrlInput');
 if (apiUrlInput) apiUrlInput.value = API_URL;
 
-// Load sample data from localStorage or add if empty
 async function initialize() {
     if (!checkLogin()) {
         document.getElementById('loginPage').style.display = 'flex';
