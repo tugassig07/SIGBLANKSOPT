@@ -2,765 +2,49 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <title>Admin Panel SIG Blank Spot - Google Sheets Sync</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Admin Panel SIG Blank Spot - Bojonegoro</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-  <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      background: #F1F5F9;
-      font-family: 'Inter', sans-serif;
-      color: #1E293B;
-      overflow-x: hidden;
-    }
-
-    /* Login Modal */
-    .modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-
-    .modal-content {
-      background: #FFFFFF;
-      border-radius: 32px;
-      max-width: 420px;
-      width: 90%;
-      padding: 32px;
-      text-align: center;
-    }
-
-    .login-logo {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-      margin-bottom: 32px;
-    }
-
-    .logo-icon {
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #00D4FF, #8B5CF6);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      color: white;
-    }
-
-    .logo-text h2 {
-      font-size: 22px;
-      font-weight: 700;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      color: #0F172A;
-    }
-
-    .logo-text p {
-      font-size: 12px;
-      color: #64748B;
-    }
-
-    .form-group {
-      margin-bottom: 16px;
-      text-align: left;
-    }
-
-    .form-group label {
-      display: block;
-      margin-bottom: 6px;
-      font-size: 13px;
-      color: #475569;
-      font-weight: 500;
-    }
-
-    .form-group input {
-      width: 100%;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      padding: 12px 14px;
-      border-radius: 24px;
-      color: #1E293B;
-      font-family: 'Inter', sans-serif;
-      font-size: 14px;
-    }
-
-    .form-group input:focus {
-      outline: none;
-      border-color: #00D4FF;
-      box-shadow: 0 0 0 2px rgba(0,212,255,0.2);
-    }
-
-    .btn-primary {
-      background: linear-gradient(95deg, #00D4FF, #8B5CF6);
-      border: none;
-      padding: 12px 24px;
-      border-radius: 40px;
-      color: white;
-      font-weight: 600;
-      cursor: pointer;
-      transition: 0.2s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      width: 100%;
-      font-size: 14px;
-    }
-
-    .btn-primary:hover {
-      opacity: 0.9;
-      transform: scale(1.02);
-    }
-
-    .btn-outline {
-      background: transparent;
-      border: 1px solid #00D4FF;
-      padding: 8px 16px;
-      border-radius: 40px;
-      color: #00B4D4;
-      cursor: pointer;
-      transition: 0.2s;
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-    }
-
-    .btn-outline:hover {
-      background: #E0F7FA;
-    }
-
-    .login-error {
-      background: #FEE2E2;
-      color: #DC2626;
-      padding: 10px;
-      border-radius: 12px;
-      font-size: 13px;
-      margin-bottom: 16px;
-      display: none;
-    }
-
-    .login-footer {
-      margin-top: 24px;
-      padding-top: 16px;
-      border-top: 1px solid #E2E8F0;
-      color: #94A3B8;
-      font-size: 11px;
-    }
-
-    /* Admin Panel */
-    #adminContent {
-      display: none;
-    }
-
-    .admin-wrapper {
-      display: flex;
-      min-height: 100vh;
-    }
-
-    /* Sidebar */
-    .sidebar-admin {
-      width: 280px;
-      background: #FFFFFF;
-      border-right: 1px solid #E2E8F0;
-      padding: 28px 20px;
-      position: fixed;
-      height: 100vh;
-      overflow-y: auto;
-      transition: all 0.3s ease;
-      z-index: 100;
-      box-shadow: 2px 0 12px rgba(0,0,0,0.05);
-    }
-
-    .logo-area {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 40px;
-      padding-bottom: 24px;
-      border-bottom: 1px solid #E2E8F0;
-    }
-
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      padding: 12px 16px;
-      margin: 8px 0;
-      border-radius: 16px;
-      color: #475569;
-      transition: 0.2s;
-      cursor: pointer;
-      font-weight: 500;
-    }
-
-    .nav-item i {
-      width: 24px;
-    }
-
-    .nav-item:hover {
-      background: #F1F5F9;
-      color: #00B4D4;
-    }
-
-    .nav-item.active {
-      background: #E0F7FA;
-      color: #00B4D4;
-      border-left: 3px solid #00D4FF;
-    }
-
-    .logout-item {
-      margin-top: auto;
-      margin-bottom: 0;
-      color: #DC2626 !important;
-      border-top: 1px solid #E2E8F0;
-      margin-top: 40px;
-      padding-top: 16px;
-    }
-
-    .logout-item:hover {
-      background: #FEE2E2 !important;
-      color: #DC2626 !important;
-    }
-
-    /* Main Content */
-    .main-content {
-      flex: 1;
-      margin-left: 280px;
-      padding: 28px 32px;
-    }
-
-    /* Top Bar */
-    .top-bar-admin {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 32px;
-      background: #FFFFFF;
-      padding: 14px 28px;
-      border-radius: 28px;
-      border: 1px solid #E2E8F0;
-    }
-
-    .mobile-menu-btn {
-      display: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 10px;
-      border: 1px solid #E2E8F0;
-      background: transparent;
-      cursor: pointer;
-      color: #64748B;
-    }
-
-    .page-title {
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      font-size: 24px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #0F172A, #00B4D4);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-    }
-
-    .admin-badge {
-      background: #F1F5F9;
-      padding: 8px 16px;
-      border-radius: 40px;
-      font-size: 13px;
-      font-weight: 500;
-      color: #1E293B;
-    }
-
-    /* Stats Grid */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 20px;
-      margin-bottom: 32px;
-    }
-
-    .stat-card {
-      background: #FFFFFF;
-      border: 1px solid #E2E8F0;
-      border-radius: 28px;
-      padding: 20px;
-      transition: 0.2s;
-      cursor: pointer;
-    }
-
-    .stat-card:hover {
-      border-color: #00D4FF;
-      transform: translateY(-2px);
-    }
-
-    .stat-title {
-      font-size: 13px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: #64748B;
-      margin-bottom: 12px;
-    }
-
-    .stat-number {
-      font-size: 38px;
-      font-weight: 800;
-      font-family: 'Plus Jakarta Sans', sans-serif;
-      color: #0F172A;
-    }
-
-    .stat-sub {
-      font-size: 12px;
-      margin-top: 8px;
-      color: #10B981;
-    }
-
-    /* Data Section */
-    .data-section {
-      background: #FFFFFF;
-      border-radius: 28px;
-      border: 1px solid #E2E8F0;
-      padding: 24px;
-      margin-bottom: 32px;
-    }
-
-    .section-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      flex-wrap: wrap;
-      margin-bottom: 24px;
-      gap: 12px;
-    }
-
-    /* Charts */
-    .charts-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 24px;
-      margin-top: 20px;
-    }
-
-    .chart-card {
-      background: #FFFFFF;
-      border-radius: 28px;
-      padding: 18px;
-      border: 1px solid #E2E8F0;
-    }
-
-    canvas {
-      max-height: 280px;
-      width: 100%;
-    }
-
-    /* Search & Filter */
-    .search-filter-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .search-bar {
-      flex: 2;
-      background: #F8FAFC;
-      border: 1px solid #E2E8F0;
-      border-radius: 40px;
-      padding: 10px 18px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .search-bar input {
-      flex: 1;
-      background: none;
-      border: none;
-      color: #1E293B;
-      outline: none;
-    }
-
-    .filter-group {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-
-    .filter-select {
-      padding: 10px 16px;
-      border: 1px solid #E2E8F0;
-      border-radius: 40px;
-      background: #F8FAFC;
-      color: #1E293B;
-      font-family: 'Inter', sans-serif;
-      font-size: 13px;
-      cursor: pointer;
-    }
-
-    /* Table */
-    .table-container {
-      overflow-x: auto;
-    }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 600px;
-    }
-
-    th, td {
-      text-align: left;
-      padding: 14px 12px;
-      border-bottom: 1px solid #E2E8F0;
-      font-size: 13px;
-    }
-
-    th {
-      color: #00B4D4;
-      font-weight: 600;
-      background: #F8FAFC;
-    }
-
-    .badge-status {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .badge-blank { background: #FEE2E2; color: #DC2626; }
-    .badge-lemah { background: #FEF3C7; color: #D97706; }
-    .badge-sedang { background: #FFEDD5; color: #EA580C; }
-    .badge-baik { background: #D1FAE5; color: #059669; }
-
-    .action-icons i {
-      margin: 0 6px;
-      cursor: pointer;
-      color: #94A3B8;
-      transition: 0.2s;
-      font-size: 16px;
-    }
-
-    .action-icons i:hover {
-      color: #00B4D4;
-    }
-
-    /* Modal Form */
-    .modal-form {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.5);
-      backdrop-filter: blur(4px);
-      align-items: center;
-      justify-content: center;
-      z-index: 2000;
-    }
-
-    .modal-form .modal-content {
-      max-width: 600px;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 0;
-    }
-
-    .modal-form .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 20px 24px;
-      border-bottom: 1px solid #E2E8F0;
-    }
-
-    .modal-form .modal-header h3 {
-      font-size: 20px;
-      font-weight: 600;
-    }
-
-    .modal-close {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      border: none;
-      background: #F1F5F9;
-      color: #64748B;
-      font-size: 20px;
-      cursor: pointer;
-    }
-
-    .modal-close:hover {
-      background: #FEE2E2;
-      color: #DC2626;
-    }
-
-    .modal-form form {
-      padding: 24px;
-    }
-
-    .form-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-    }
-
-    .modal-buttons {
-      display: flex;
-      gap: 12px;
-      justify-content: flex-end;
-      margin-top: 20px;
-      padding-top: 16px;
-      border-top: 1px solid #E2E8F0;
-    }
-
-    /* Toast */
-    .toast-admin {
-      position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: #FFFFFF;
-      border-left: 4px solid #00D4FF;
-      padding: 14px 24px;
-      border-radius: 40px;
-      z-index: 1100;
-      font-size: 14px;
-      animation: fadeInUp 0.3s ease;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      color: #1E293B;
-    }
-
-    @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px);}
-      to { opacity: 1; transform: translateY(0);}
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-      .mobile-menu-btn {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-      
-      .sidebar-admin {
-        transform: translateX(-100%);
-        position: fixed;
-        z-index: 1001;
-      }
-      
-      .sidebar-admin.open {
-        transform: translateX(0);
-      }
-      
-      .main-content {
-        margin-left: 0;
-        padding: 16px;
-      }
-      
-      .top-bar-admin {
-        padding: 12px 16px;
-      }
-      
-      .page-title {
-        font-size: 18px;
-      }
-      
-      .stats-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 12px;
-      }
-      
-      .stat-number {
-        font-size: 28px;
-      }
-      
-      .section-header {
-        flex-direction: column;
-        align-items: stretch;
-      }
-      
-      .search-filter-bar {
-        flex-direction: column;
-      }
-      
-      .filter-group {
-        flex-direction: column;
-      }
-      
-      .filter-select {
-        width: 100%;
-      }
-      
-      .charts-row {
-        grid-template-columns: 1fr;
-      }
-      
-      .form-row {
-        grid-template-columns: 1fr;
-        gap: 0;
-      }
-      
-      .modal-buttons {
-        flex-direction: column;
-      }
-      
-      .modal-buttons button {
-        width: 100%;
-        justify-content: center;
-      }
-    }
-
-    /* Sync Section */
-    .sync-info {
-      background: #F8FAFC;
-      border-radius: 20px;
-      padding: 20px;
-      margin-bottom: 24px;
-    }
-
-    .sync-card {
-      display: flex;
-      gap: 20px;
-      align-items: center;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
-    }
-
-    .sync-icon {
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #00D4FF20, #8B5CF620);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 28px;
-      color: #00D4FF;
-    }
-
-    .sync-details {
-      flex: 1;
-    }
-
-    .sync-details h4 {
-      margin-bottom: 8px;
-      color: #0F172A;
-    }
-
-    .status-badge {
-      display: inline-block;
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-
-    .status-connected {
-      background: #D1FAE5;
-      color: #059669;
-    }
-
-    .sync-actions {
-      display: flex;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-
-    .sync-log {
-      margin-top: 24px;
-    }
-
-    .sync-log h4 {
-      margin-bottom: 16px;
-      color: #0F172A;
-    }
-
-    .log-container {
-      background: #F8FAFC;
-      border-radius: 16px;
-      padding: 16px;
-      max-height: 300px;
-      overflow-y: auto;
-      font-family: monospace;
-      font-size: 12px;
-    }
-
-    .log-entry {
-      padding: 8px 0;
-      border-bottom: 1px solid #E2E8F0;
-      color: #475569;
-    }
-
-    .log-entry.log-success { color: #059669; }
-    .log-entry.log-error { color: #DC2626; }
-    .log-time { color: #94A3B8; margin-right: 8px; }
-
-    hr { margin: 20px 0; border-color: #E2E8F0; }
-    
-    .empty-state-container {
-      text-align: center;
-      padding: 60px 20px;
-    }
-    
-    .empty-icon { font-size: 64px; color: #94A3B8; margin-bottom: 16px; }
-    .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
-    .empty-desc { font-size: 14px; color: #64748B; margin-bottom: 20px; }
-  </style>
+  <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
 <!-- LOGIN MODAL -->
-<div id="loginModal" class="modal">
-  <div class="modal-content">
-    <div class="login-logo">
-      <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
-      <div class="logo-text">
-        <h2>Admin SIG Blank Spot</h2>
-        <p>Bojonegoro 2026</p>
+<div id="loginModal" class="modal" style="display: flex;">
+  <div class="modal-content login-modal">
+    <div class="login-header">
+      <div class="login-logo">
+        <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
+        <div class="logo-text">
+          <h2>Admin SIG Blank Spot</h2>
+          <p>Bojonegoro 2026</p>
+        </div>
       </div>
     </div>
     <form id="loginForm">
       <div class="form-group">
-        <label>Username</label>
-        <input type="text" id="loginUsername" placeholder="admin" required>
+        <label><i class="fas fa-user"></i> Username</label>
+        <input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="off">
       </div>
       <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="loginPassword" placeholder="********" required>
+        <label><i class="fas fa-lock"></i> Password</label>
+        <input type="password" id="loginPassword" placeholder="Masukkan password" required>
       </div>
       <div class="login-error" id="loginError"></div>
-      <button type="submit" class="btn-primary">Login</button>
+      <button type="submit" class="btn-primary login-btn">
+        <i class="fas fa-sign-in-alt"></i> Login
+      </button>
     </form>
     <div class="login-footer">
-      <small>© PTI IKIP PGRI BOJONEGORO 2026</small>
+      <small>© BPS Bojonegoro 2026</small>
     </div>
   </div>
 </div>
 
 <!-- MAIN ADMIN CONTENT -->
-<div id="adminContent">
+<div id="adminContent" style="display: none;">
   <div class="admin-wrapper">
-    <!-- Sidebar -->
     <div class="sidebar-admin" id="sidebarAdmin">
       <div class="logo-area">
         <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
@@ -776,59 +60,40 @@
       <div class="nav-item logout-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</div>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content">
-      <!-- Top Bar -->
       <div class="top-bar-admin">
-        <button class="mobile-menu-btn" id="mobileMenuBtn"><i class="fas fa-bars"></i></button>
         <div class="page-title" id="mainTitle">Dashboard SIG 2026</div>
-        <div class="admin-badge"><i class="fas fa-user-shield"></i> <span id="adminName">Admin</span></div>
+        <div class="admin-badge">
+          <i class="fas fa-user-shield"></i> 
+          <span id="adminName">Admin</span>
+          <span style="margin: 0 8px">|</span>
+          <i class="fas fa-cloud"></i> 
+          <span id="syncStatus">Local Storage</span>
+        </div>
       </div>
 
-      <!-- Dashboard View -->
       <div id="dashboardView">
         <div class="stats-grid" id="statGrid"></div>
         <div class="data-section">
           <div class="section-header">
             <h3><i class="fas fa-chart-simple"></i> Ringkasan Cepat</h3>
-            <button class="btn-outline" id="refreshDashboardBtn"><i class="fas fa-rotate-right"></i> Sync Data</button>
-          </div>
-          <div class="charts-row">
-            <div class="chart-card"><canvas id="statusChart"></canvas></div>
-            <div class="chart-card"><canvas id="kecChart"></canvas></div>
+            <button class="btn-outline" id="refreshDashboardBtn"><i class="fas fa-rotate-right"></i> Refresh Data</button>
           </div>
         </div>
       </div>
 
-      <!-- Points View -->
       <div id="pointsView" style="display: none;">
         <div class="data-section">
           <div class="section-header">
             <h3><i class="fas fa-database"></i> Daftar Titik Survei</h3>
-            <button class="btn-primary" id="addPointBtn"><i class="fas fa-plus"></i> Tambah Titik</button>
-          </div>
-          <div class="search-filter-bar">
-            <div class="search-bar">
-              <i class="fas fa-search"></i>
-              <input type="text" id="searchPoint" placeholder="Cari dusun, desa...">
-            </div>
-            <div class="filter-group">
-              <select id="filterKec" class="filter-select">
-                <option value="all">Semua Kecamatan</option>
-                <option value="Kedewan">Kedewan</option>
-                <option value="Kasiman">Kasiman</option>
-              </select>
-              <select id="filterStatusPoint" class="filter-select">
-                <option value="all">Semua Status</option>
-                <option value="blank">Blank Spot</option>
-                <option value="lemah">Sinyal Lemah</option>
-                <option value="sedang">Sinyal Sedang</option>
-                <option value="baik">Sinyal Baik</option>
-              </select>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+              <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="searchPoint" placeholder="Cari dusun, desa..."></div>
+              <button class="btn-primary" id="addPointBtn"><i class="fas fa-plus"></i> Tambah Titik</button>
+              <button class="btn-outline" id="syncNowBtn"><i class="fas fa-cloud-upload-alt"></i> Sync ke Google Sheets</button>
             </div>
           </div>
-          <div class="table-container">
-            <table>
+          <div style="overflow-x: auto;">
+            <table id="pointsTable">
               <thead>
                 <tr><th>ID</th><th>Dusun</th><th>Desa</th><th>Kecamatan</th><th>Status</th><th>Populasi</th><th>Provider</th><th>Aksi</th></tr>
               </thead>
@@ -838,7 +103,6 @@
         </div>
       </div>
 
-      <!-- Sync View -->
       <div id="syncView" style="display: none;">
         <div class="data-section">
           <h3><i class="fas fa-cloud-upload-alt"></i> Sinkronisasi Data</h3>
@@ -847,7 +111,7 @@
               <div class="sync-icon"><i class="fab fa-google"></i></div>
               <div class="sync-details">
                 <h4>Google Sheets API</h4>
-                <p>Status: <span id="apiStatus" class="status-badge status-connected">Terhubung</span></p>
+                <p>Status: <span id="apiStatus" class="status-badge">Belum Terhubung</span></p>
                 <p>Last Sync: <span id="lastSync">-</span></p>
               </div>
             </div>
@@ -866,13 +130,12 @@
         </div>
       </div>
 
-      <!-- Settings View -->
       <div id="settingsView" style="display: none;">
         <div class="data-section">
           <h3><i class="fas fa-key"></i> Konfigurasi API</h3>
           <div class="form-group">
             <label>Google Apps Script URL</label>
-            <input type="text" id="apiUrl" class="filter-select" style="width:100%" value="https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec">
+            <input type="text" id="apiUrl" style="width: 100%;">
             <small>URL Web App dari Google Apps Script</small>
           </div>
           <button class="btn-primary" id="saveApiConfig"><i class="fas fa-save"></i> Simpan Konfigurasi</button>
@@ -880,31 +143,29 @@
           <h3><i class="fas fa-user-lock"></i> Ubah Password</h3>
           <div class="form-group">
             <label>Password Lama</label>
-            <input type="password" id="oldPassword" class="filter-select" style="width:100%" placeholder="Masukkan password lama">
+            <input type="password" id="oldPassword" placeholder="Masukkan password lama">
           </div>
           <div class="form-group">
             <label>Password Baru</label>
-            <input type="password" id="newPassword" class="filter-select" style="width:100%" placeholder="Masukkan password baru">
+            <input type="password" id="newPassword" placeholder="Masukkan password baru">
           </div>
           <div class="form-group">
             <label>Konfirmasi Password Baru</label>
-            <input type="password" id="confirmPassword" class="filter-select" style="width:100%" placeholder="Konfirmasi password baru">
+            <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
           </div>
           <button class="btn-primary" id="changePasswordBtn"><i class="fas fa-key"></i> Ubah Password</button>
           <hr>
-          <button class="btn-primary" id="resetDataBtn"><i class="fas fa-trash-alt"></i> Reset Data Kosong</button>
+          <button class="btn-outline" id="resetDataBtn"><i class="fas fa-trash-alt"></i> Reset Data Kosong</button>
+          <button class="btn-primary" id="addSampleDataBtn" style="margin-left: 10px;"><i class="fas fa-database"></i> Tambah Sample Data</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Modal Form -->
-  <div id="pointModal" class="modal-form">
+  <!-- MODAL FORM -->
+  <div id="pointModal" class="modal">
     <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modalTitle">Tambah / Edit Titik</h3>
-        <button class="modal-close" id="closeModalBtn">&times;</button>
-      </div>
+      <h3 id="modalTitle">Tambah / Edit Titik</h3>
       <form id="pointForm">
         <input type="hidden" id="editId">
         <div class="form-row">
@@ -912,20 +173,8 @@
           <div class="form-group"><label>Desa *</label><input type="text" id="desa" required placeholder="Contoh: Kedewan"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Kecamatan</label>
-            <select id="kec">
-              <option value="Kedewan">Kedewan</option>
-              <option value="Kasiman">Kasiman</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Status Sinyal</label>
-            <select id="status">
-              <option value="blank">Blank Spot</option>
-              <option value="lemah">Sinyal Lemah</option>
-              <option value="sedang">Sinyal Sedang</option>
-              <option value="baik">Sinyal Baik</option>
-            </select>
-          </div>
+          <div class="form-group"><label>Kecamatan</label><select id="kec"><option value="Kedewan">Kedewan</option><option value="Kasiman">Kasiman</option></select></div>
+          <div class="form-group"><label>Status Sinyal</label><select id="status"><option value="blank">Blank Spot</option><option value="lemah">Sinyal Lemah</option><option value="sedang">Sinyal Sedang</option><option value="baik">Sinyal Baik</option></select></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Latitude</label><input type="number" step="any" id="lat" required placeholder="-7.105"></div>
@@ -940,10 +189,7 @@
           <div class="form-group"><label>Elevasi (mdpl)</label><input type="number" id="elev" value="0"></div>
         </div>
         <div class="form-group"><label>Keterangan</label><input type="text" id="ket" placeholder="Contoh: Tertutup bukit, blank spot"></div>
-        <div class="modal-buttons">
-          <button type="button" class="btn-outline" id="cancelModalBtn">Batal</button>
-          <button type="submit" class="btn-primary">Simpan</button>
-        </div>
+        <div class="modal-buttons"><button type="button" class="btn-outline" id="closeModalBtn">Batal</button><button type="submit" class="btn-primary">Simpan</button></div>
       </form>
     </div>
   </div>
