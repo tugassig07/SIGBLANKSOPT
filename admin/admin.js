@@ -1,725 +1,414 @@
 // ============================================
-// ADMIN PANEL - GOOGLE SHEETS SYNC (FIXED VERSION)
+// ADMIN PANEL - DIRECT SYNC TO GOOGLE SHEETS
+// TANPA LOCAL STORAGE BACKUP
 // ============================================
 
 let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
-
-const ADMIN_CREDENTIALS = {
-  username: 'admin',
-  passwordHash: btoa('admin123')
-};
-
-let isLoggedIn = false;
-let currentAdmin = null;
 let pointsData = [];
-let lastSyncTime = null;
-let isSyncing = false;
+let isLoading = false;
 
-// ========== LOAD SAVED API URL ==========
-function loadApiConfig() {
-  const savedUrl = localStorage.getItem('googleApiUrl');
-  if (savedUrl) {
-    API_URL = savedUrl;
-    const apiUrlInput = document.getElementById('apiUrl');
-    if (apiUrlInput) apiUrlInput.value = savedUrl;
-  }
-}
-
-function saveApiConfig() {
-  const newUrl = document.getElementById('apiUrl').value;
-  if (newUrl) {
-    API_URL = newUrl;
-    localStorage.setItem('googleApiUrl', newUrl);
-    showToast('Konfigurasi API disimpan', 'success');
-    addLog('🔧 URL API diupdate', 'info');
-  }
-}
-
-// ========== UI FUNCTIONS ==========
-function showToast(msg, type = 'success') {
-  const toast = document.createElement('div');
-  toast.className = `toast-admin toast-${type}`;
-  toast.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
-
-function addLog(message, type = 'info') {
-  const logContainer = document.getElementById('logContainer');
-  if (logContainer) {
-    const time = new Date().toLocaleTimeString();
-    const logEntry = document.createElement('div');
-    logEntry.className = `log-entry log-${type}`;
-    logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
-    logContainer.prepend(logEntry);
-    while (logContainer.children.length > 30) {
-      logContainer.removeChild(logContainer.lastChild);
+// ========== LOGIN ==========
+function checkLogin() {
+    const saved = localStorage.getItem('adminLogged');
+    if (saved === 'true') {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('adminApp').style.display = 'block';
+        document.getElementById('adminName').innerText = localStorage.getItem('adminUser') || 'Admin';
+        loadDataFromSheets();
+        return true;
     }
-  }
-  console.log(`[${type.toUpperCase()}] ${message}`);
+    return false;
 }
 
-// ========== DATA STORAGE ==========
-function saveToLocalStorage() {
-  localStorage.setItem('sigAdminPoints', JSON.stringify(pointsData));
-  if (lastSyncTime) localStorage.setItem('lastSyncTime', lastSyncTime.toISOString());
-}
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (username === 'admin' && password === 'admin123') {
+        localStorage.setItem('adminLogged', 'true');
+        localStorage.setItem('adminUser', username);
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('adminApp').style.display = 'block';
+        document.getElementById('adminName').innerText = username;
+        loadDataFromSheets();
+    } else {
+        const err = document.getElementById('loginError');
+        err.innerText = 'Username atau password salah! (admin/admin123)';
+        err.style.display = 'block';
+        setTimeout(() => err.style.display = 'none', 3000);
+    }
+});
 
-function loadFromLocalStorage() {
-  const stored = localStorage.getItem('sigAdminPoints');
-  if (stored && stored !== '[]') {
-    pointsData = JSON.parse(stored);
-    addLog(`📂 Memuat ${pointsData.length} data dari localStorage`, 'info');
-  } else {
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('adminLogged');
+    localStorage.removeItem('adminUser');
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('adminApp').style.display = 'none';
     pointsData = [];
-    addLog('📂 Memulai dengan data kosong', 'info');
-  }
-  
-  const savedSync = localStorage.getItem('lastSyncTime');
-  if (savedSync) lastSyncTime = new Date(savedSync);
-  updateSyncStatus();
-  renderAll();
-}
+});
 
-function updateSyncStatus() {
-  const syncStatusSpan = document.getElementById('syncStatus');
-  const lastSyncSpan = document.getElementById('lastSync');
-  if (syncStatusSpan) syncStatusSpan.innerHTML = '<i class="fas fa-database"></i> Local Storage';
-  if (lastSyncSpan && lastSyncTime) lastSyncSpan.textContent = lastSyncTime.toLocaleString();
-  else if (lastSyncSpan) lastSyncSpan.textContent = 'Belum pernah sync';
+// ========== NAVIGATION ==========
+document.querySelectorAll('.menu-item').forEach(item => {
+    if (item.id === 'logoutBtn') return;
+    item.addEventListener('click', () => {
+        document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+        item.classList.add('active');
+        const page = item.getAttribute('data-page');
+        document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+        document.getElementById(`${page}Page`).style.display = 'block';
+        document.getElementById('pageTitle').innerText = 
+            page === 'dashboard' ? 'Dashboard' :
+            page === 'points' ? 'Kelola Titik' :
+            page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
+    });
+});
+
+// ========== LOAD DATA FROM GOOGLE SHEETS ==========
+async function loadDataFromSheets() {
+    if (isLoading) return;
+    isLoading = true;
+    addLog('📥 Mengambil data dari Google Sheets...', 'info');
+    
+    try {
+        const response = await fetch(`${API_URL}?action=getData&t=${Date.now()}`, { method: 'GET' });
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+                pointsData = result.data.map(item => ({
+                    id: parseInt(item.id),
+                    dusun: item.dusun || '',
+                    desa: item.desa || '',
+                    kec: item.kec || '',
+                    status: item.status || 'blank',
+                    lat: parseFloat(item.lat) || 0,
+                    lng: parseFloat(item.lng) || 0,
+                    populasi: parseInt(item.populasi) || 0,
+                    provider: item.provider || ''
+                }));
+                addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
+            } else {
+                pointsData = [];
+                addLog('📭 Data kosong dari Google Sheets', 'info');
+            }
+        } else {
+            throw new Error(`HTTP ${response.status}`);
+        }
+    } catch (error) {
+        addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
+        pointsData = [];
+    }
+    
+    renderDashboard();
+    renderTable();
+    updateLastSync();
+    isLoading = false;
 }
 
 // ========== RENDER FUNCTIONS ==========
-function renderStats() {
-  const blank = pointsData.filter(p => p.status === 'blank').length;
-  const lemah = pointsData.filter(p => p.status === 'lemah').length;
-  const sedang = pointsData.filter(p => p.status === 'sedang').length;
-  const baik = pointsData.filter(p => p.status === 'baik').length;
-  const total = pointsData.length;
-  
-  const statGrid = document.getElementById('statGrid');
-  if (!statGrid) return;
-  
-  if (total === 0) {
-    statGrid.innerHTML = `
-      <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">0</div><div class="stat-sub">Belum ada data</div></div>
-      <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">0</div><div class="stat-sub">Prioritas tinggi</div></div>
-      <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">0</div><div class="stat-sub">Perlu perbaikan</div></div>
-      <div class="stat-card"><div class="stat-title">Sinyal Sedang</div><div class="stat-number" style="color:#EA580C">0</div><div class="stat-sub">Cukup stabil</div></div>
-      <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">0</div><div class="stat-sub">0% coverage</div></div>
+function renderDashboard() {
+    const blank = pointsData.filter(p => p.status === 'blank').length;
+    const lemah = pointsData.filter(p => p.status === 'lemah').length;
+    const sedang = pointsData.filter(p => p.status === 'sedang').length;
+    const baik = pointsData.filter(p => p.status === 'baik').length;
+    const total = pointsData.length;
+    
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div></div>
+        <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div></div>
+        <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div></div>
+        <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div></div>
+        <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
     `;
-  } else {
-    const coveragePercent = total > 0 ? Math.round((baik / total) * 100) : 0;
-    statGrid.innerHTML = `
-      <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">${total}</div><div class="stat-sub">Kedewan + Kasiman</div></div>
-      <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">${blank}</div><div class="stat-sub">Prioritas tinggi</div></div>
-      <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">${lemah}</div><div class="stat-sub">Perlu perbaikan</div></div>
-      <div class="stat-card"><div class="stat-title">Sinyal Sedang</div><div class="stat-number" style="color:#EA580C">${sedang}</div><div class="stat-sub">Cukup stabil</div></div>
-      <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">${baik}</div><div class="stat-sub">${coveragePercent}% coverage</div></div>
-    `;
-  }
 }
 
 function renderTable() {
-  const searchInput = document.getElementById('searchPoint');
-  const search = searchInput ? searchInput.value.toLowerCase() : '';
-  const filtered = pointsData.filter(p => 
-    (p.dusun && p.dusun.toLowerCase().includes(search)) || 
-    (p.desa && p.desa.toLowerCase().includes(search))
-  );
-  
-  const tbody = document.getElementById('tableBody');
-  if (!tbody) return;
-  
-  if (filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="8" style="text-align: center; padding: 60px;">
-          <div class="empty-state-container">
-            <div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div>
-            <div class="empty-title">Belum ada data titik</div>
-            <div class="empty-desc">Klik tombol "Tambah Titik" untuk menambahkan data blank spot</div>
-            <button class="btn-primary" onclick="document.getElementById('addPointBtn').click()" style="margin-top: 16px;">
-              <i class="fas fa-plus"></i> Tambah Titik Pertama
-            </button>
-          </div>
-        </td>
-      </tr>
-    `;
-  } else {
+    const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const filtered = pointsData.filter(p => 
+        p.dusun?.toLowerCase().includes(search) || 
+        p.desa?.toLowerCase().includes(search)
+    );
+    
+    const tbody = document.getElementById('pointsTableBody');
+    if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
+        return;
+    }
+    
     tbody.innerHTML = filtered.map(p => `
-      <tr>
-        <td>${p.id || '-'}</td>
-        <td>${p.dusun || '-'}</td>
-        <td>${p.desa || '-'}</td>
-        <td>${p.kec || '-'}</td>
-        <td><span class="badge-status badge-${p.status || 'blank'}">${(p.status || 'blank').toUpperCase()}</span></td>
-        <td>${p.populasi || 0}</td>
-        <td>${p.provider || '-'}</td>
-        <td class="action-icons">
-          <i class="fas fa-edit" onclick="editPoint(${p.id})"></i> 
-          <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i>
-        </td>
-      </tr>
+        <tr>
+            <td>${p.id}</td>
+            <td>${p.dusun || '-'}</td>
+            <td>${p.desa || '-'}</td>
+            <td>${p.kec || '-'}</td>
+            <td><span class="badge-status badge-${p.status}">${(p.status || 'blank').toUpperCase()}</span></td>
+            <td>${p.populasi || 0}</td>
+            <td>${p.provider || '-'}</td>
+            <td class="action-icons">
+                <i class="fas fa-edit" onclick="editPoint(${p.id})"></i>
+                <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i>
+            </td>
+        </tr>
     `).join('');
-  }
 }
 
-function renderAll() {
-  renderStats();
-  renderTable();
-}
-
-// ========== DATA MANAGEMENT ==========
-function addSampleData() {
-  if (pointsData.length > 0) {
-    if (confirm('Data sudah ada. Tambahkan sample data? Data yang ada akan ditambahkan (tidak dihapus).')) {
-      addSampleDataToExisting();
+function addLog(msg, type = 'info') {
+    const logDiv = document.getElementById('logList');
+    if (logDiv) {
+        const time = new Date().toLocaleTimeString();
+        logDiv.innerHTML = `<div class="log-entry log-${type}">[${time}] ${msg}</div>` + logDiv.innerHTML;
+        if (logDiv.children.length > 30) logDiv.removeChild(logDiv.lastChild);
     }
-  } else {
-    addSampleDataToExisting();
-  }
+    console.log(msg);
 }
 
-function addSampleDataToExisting() {
-  const newId = pointsData.length > 0 ? Math.max(...pointsData.map(p => p.id), 0) + 1 : 1;
-  
-  const samplePoints = [
-    {
-      id: newId,
-      dusun: 'Dk. Ngrowo',
-      desa: 'Kedewan',
-      kec: 'Kedewan',
-      status: 'blank',
-      lat: -7.105,
-      lng: 111.630,
-      populasi: 1250,
-      provider: 'Telkomsel',
-      luas: '2.5 ha',
-      elev: 150,
-      ket: 'Tertutup perbukitan'
-    },
-    {
-      id: newId + 1,
-      dusun: 'Dk. Sumberjo',
-      desa: 'Kedewan',
-      kec: 'Kedewan',
-      status: 'lemah',
-      lat: -7.108,
-      lng: 111.635,
-      populasi: 850,
-      provider: 'XL',
-      luas: '1.8 ha',
-      elev: 120,
-      ket: 'Jarak jauh dari BTS'
-    },
-    {
-      id: newId + 2,
-      dusun: 'Dk. Krajan',
-      desa: 'Kasiman',
-      kec: 'Kasiman',
-      status: 'sedang',
-      lat: -7.112,
-      lng: 111.640,
-      populasi: 2100,
-      provider: 'Indosat',
-      luas: '3.2 ha',
-      elev: 100,
-      ket: 'Cukup stabil'
-    },
-    {
-      id: newId + 3,
-      dusun: 'Dk. Ngepung',
-      desa: 'Kasiman',
-      kec: 'Kasiman',
-      status: 'baik',
-      lat: -7.115,
-      lng: 111.645,
-      populasi: 3200,
-      provider: 'Telkomsel',
-      luas: '4.0 ha',
-      elev: 90,
-      ket: 'Dekat tower'
-    }
-  ];
-  
-  for (const point of samplePoints) {
-    pointsData.push(point);
-  }
-  
-  saveToLocalStorage();
-  renderAll();
-  addLog(`📝 Menambahkan ${samplePoints.length} data sample`, 'success');
-  showToast(`${samplePoints.length} data sample ditambahkan`, 'success');
+function updateLastSync() {
+    const last = localStorage.getItem('lastSync');
+    document.getElementById('lastSyncTime').innerHTML = last ? new Date(last).toLocaleString() : '-';
 }
 
-function addPoint(pointData) {
-  const newId = pointsData.length > 0 ? Math.max(...pointsData.map(p => p.id), 0) + 1 : 1;
-  const newPoint = { 
-    id: newId, 
-    ...pointData, 
-    rssi: pointData.status === 'blank' ? -90 : (pointData.status === 'lemah' ? -80 : (pointData.status === 'sedang' ? -65 : -50))
-  };
-  
-  pointsData.push(newPoint);
-  saveToLocalStorage();
-  renderAll();
-  addLog(`➕ Menambahkan titik: ${newPoint.dusun} (ID: ${newId})`, 'success');
-  showToast(`Titik "${newPoint.dusun}" berhasil ditambahkan`, 'success');
-  
-  // Auto sync ke Google Sheets
-  syncSinglePointToSheet(newPoint, 'add');
-  return newPoint;
-}
-
-function editPoint(id) {
-  const point = pointsData.find(p => p.id === id);
-  if (point) {
-    document.getElementById('editId').value = point.id;
-    document.getElementById('dusun').value = point.dusun || '';
-    document.getElementById('desa').value = point.desa || '';
-    document.getElementById('kec').value = point.kec || 'Kedewan';
-    document.getElementById('status').value = point.status || 'blank';
-    document.getElementById('lat').value = point.lat || 0;
-    document.getElementById('lng').value = point.lng || 0;
-    document.getElementById('populasi').value = point.populasi || 0;
-    document.getElementById('provider').value = point.provider || '';
-    document.getElementById('luas').value = point.luas || '';
-    document.getElementById('elev').value = point.elev || 0;
-    document.getElementById('ket').value = point.ket || '';
-    document.getElementById('modalTitle').innerText = 'Edit Titik';
-    document.getElementById('pointModal').style.display = 'flex';
-  }
-}
-
-function updatePoint(id, updatedData) {
-  const index = pointsData.findIndex(p => p.id === id);
-  if (index !== -1) {
-    pointsData[index] = { ...pointsData[index], ...updatedData };
-    saveToLocalStorage();
-    renderAll();
-    addLog(`✏️ Update titik: ${updatedData.dusun} (ID: ${id})`, 'info');
-    showToast(`Titik "${updatedData.dusun}" berhasil diperbarui`, 'success');
+// ========== CRUD OPERATIONS (LANGSUNG KE SHEETS) ==========
+async function addPoint(data) {
+    addLog(`➕ Menambahkan titik: ${data.dusun}...`, 'info');
     
-    // Auto sync ke Google Sheets
-    syncSinglePointToSheet(pointsData[index], 'update');
-  }
-}
-
-async function deletePoint(id) {
-  if (confirm('Hapus titik ini? Data akan dihapus dari Google Sheets juga.')) {
-    const point = pointsData.find(p => p.id === id);
-    pointsData = pointsData.filter(p => p.id !== id);
-    saveToLocalStorage();
-    renderAll();
-    addLog(`🗑️ Hapus titik: ${point?.dusun} (ID: ${id})`, 'warning');
-    showToast(`Titik "${point?.dusun}" berhasil dihapus`, 'success');
-    
-    // Sync delete ke Google Sheets
-    await syncDeleteToSheet(id);
-  }
-}
-
-function resetToDefault() {
-  if (confirm('Reset ke data kosong? Semua data yang ada akan hilang.')) {
-    pointsData = [];
-    saveToLocalStorage();
-    renderAll();
-    addLog('🔄 Data direset ke kosong', 'warning');
-    showToast('Data berhasil direset ke kosong', 'info');
-  }
-}
-
-// ========== GOOGLE SHEETS API FUNCTIONS ==========
-
-// Sync single point ke Google Sheets
-async function syncSinglePointToSheet(point, action) {
-  try {
-    const formData = new URLSearchParams();
-    formData.append('action', action);
-    formData.append('data', JSON.stringify(point));
-    formData.append('id', point.id.toString());
-    
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString()
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success) {
-        addLog(`✅ Sync ${action}: ${point.dusun} berhasil`, 'success');
-      } else {
-        addLog(`❌ Sync ${action} gagal: ${result.error}`, 'error');
-      }
-    }
-  } catch (error) {
-    addLog(`❌ Error sync ${action}: ${error.message}`, 'error');
-  }
-}
-
-// Sync delete ke Google Sheets
-async function syncDeleteToSheet(id) {
-  try {
-    const formData = new URLSearchParams();
-    formData.append('action', 'delete');
-    formData.append('id', id.toString());
-    
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      mode: 'cors',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData.toString()
-    });
-    
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success) {
-        addLog(`✅ Delete ID ${id} berhasil dari Google Sheets`, 'success');
-      }
-    }
-  } catch (error) {
-    addLog(`❌ Error delete: ${error.message}`, 'error');
-  }
-}
-
-// Test koneksi
-async function testConnection() {
-  addLog('🔌 Menguji koneksi ke Google Sheets...', 'info');
-  showToast('Menguji koneksi...', 'info');
-  
-  try {
-    const url = `${API_URL}?action=test&t=${Date.now()}`;
-    const response = await fetch(url, { method: 'GET', mode: 'cors' });
-    
-    if (response.ok) {
-      const result = await response.json();
-      if (result.success) {
-        addLog('✅ Koneksi berhasil!', 'success');
-        showToast('Koneksi berhasil', 'success');
-        
-        const apiStatus = document.getElementById('apiStatus');
-        if (apiStatus) {
-          apiStatus.className = 'status-badge status-connected';
-          apiStatus.innerHTML = 'Terhubung';
-        }
-        return true;
-      } else {
-        throw new Error(result.error || 'Unknown error');
-      }
-    } else {
-      throw new Error(`HTTP ${response.status}`);
-    }
-  } catch (error) {
-    addLog(`❌ Koneksi gagal: ${error.message}`, 'error');
-    showToast('Koneksi gagal: ' + error.message, 'error');
-    return false;
-  }
-}
-
-// Pull data dari Google Sheets
-async function fetchDataFromSheets() {
-  addLog('📥 Mengambil data dari Google Sheets...', 'info');
-  showToast('Mengambil data dari Google Sheets...', 'info');
-  
-  try {
-    const url = `${API_URL}?action=getData&t=${Date.now()}`;
-    const response = await fetch(url, { method: 'GET', mode: 'cors' });
-    
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    
-    const result = await response.json();
-    
-    if (result.success && result.data) {
-      const newData = result.data.map(item => ({
-        id: parseInt(item.id) || Date.now(),
-        kec: item.kec || '',
-        desa: item.desa || '',
-        dusun: item.dusun || '',
-        lat: parseFloat(item.lat || 0),
-        lng: parseFloat(item.lng || 0),
-        status: item.status || 'blank',
-        rssi: item.rssi || -70,
-        provider: item.provider || '',
-        populasi: parseInt(item.populasi) || 0,
-        luas: item.luas || '-',
-        elev: parseInt(item.elev) || 0,
-        ket: item.ket || ''
-      }));
-      
-      // Merge data: update yang ada, tambah yang baru
-      const existingIds = new Set(pointsData.map(p => p.id));
-      const mergedData = [...pointsData];
-      
-      for (const newPoint of newData) {
-        const existingIndex = mergedData.findIndex(p => p.id === newPoint.id);
-        if (existingIndex !== -1) {
-          mergedData[existingIndex] = newPoint;
-        } else if (!existingIds.has(newPoint.id)) {
-          mergedData.push(newPoint);
-        }
-      }
-      
-      pointsData = mergedData;
-      saveToLocalStorage();
-      lastSyncTime = new Date();
-      updateSyncStatus();
-      renderAll();
-      addLog(`✅ Berhasil mengambil ${newData.length} data dari Google Sheets`, 'success');
-      showToast(`Berhasil mengambil ${newData.length} data`, 'success');
-    } else {
-      addLog('📭 Data kosong dari Google Sheets', 'info');
-    }
-    return pointsData;
-  } catch (error) {
-    addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
-    showToast('Gagal mengambil data: ' + error.message, 'error');
-    return pointsData;
-  }
-}
-
-// Push semua data ke Google Sheets (sync penuh)
-async function fullSyncToSheets() {
-  if (isSyncing) {
-    showToast('Sinkronisasi sedang berjalan...', 'warning');
-    return;
-  }
-  
-  if (pointsData.length === 0) {
-    addLog('⚠️ Tidak ada data untuk disinkronkan', 'warning');
-    showToast('Tidak ada data untuk disinkronkan', 'warning');
-    return;
-  }
-  
-  isSyncing = true;
-  const syncBtn = document.getElementById('fullSyncBtn');
-  if (syncBtn) {
-    syncBtn.disabled = true;
-    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyinkronkan...';
-  }
-  
-  let successCount = 0;
-  let errorCount = 0;
-  
-  try {
-    addLog(`📤 Memulai sinkronisasi penuh ${pointsData.length} data...`, 'info');
-    
-    for (let i = 0; i < pointsData.length; i++) {
-      const point = pointsData[i];
-      addLog(`📤 [${i+1}/${pointsData.length}] Mengirim: ${point.dusun}...`, 'info');
-      
-      try {
+    try {
         const formData = new URLSearchParams();
-        formData.append('action', 'sync');
-        formData.append('data', JSON.stringify(point));
-        formData.append('id', point.id.toString());
+        formData.append('action', 'add');
+        formData.append('data', JSON.stringify(data));
         
         const response = await fetch(API_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: formData.toString()
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
         });
         
         if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            successCount++;
-            addLog(`✅ [${i+1}/${pointsData.length}] Berhasil: ${point.dusun}`, 'success');
-          } else {
-            errorCount++;
-            addLog(`❌ [${i+1}/${pointsData.length}] Gagal: ${result.error}`, 'error');
-          }
-        } else {
-          errorCount++;
-          addLog(`❌ [${i+1}/${pointsData.length}] HTTP ${response.status}`, 'error');
+            const result = await response.json();
+            if (result.success) {
+                addLog(`✅ Titik "${data.dusun}" berhasil ditambahkan`, 'success');
+                await loadDataFromSheets();
+                return true;
+            }
         }
+        throw new Error('Gagal menambahkan');
+    } catch (error) {
+        addLog(`❌ Gagal menambahkan: ${error.message}`, 'error');
+        return false;
+    }
+}
+
+function editPoint(id) {
+    const point = pointsData.find(p => p.id === id);
+    if (point) {
+        document.getElementById('editId').value = point.id;
+        document.getElementById('dusun').value = point.dusun || '';
+        document.getElementById('desa').value = point.desa || '';
+        document.getElementById('kec').value = point.kec || 'Kedewan';
+        document.getElementById('status').value = point.status || 'blank';
+        document.getElementById('lat').value = point.lat || 0;
+        document.getElementById('lng').value = point.lng || 0;
+        document.getElementById('populasi').value = point.populasi || 0;
+        document.getElementById('provider').value = point.provider || '';
+        document.getElementById('modalTitle').innerText = 'Edit Titik';
+        document.getElementById('pointModal').style.display = 'flex';
+    }
+}
+
+async function updatePoint(id, data) {
+    addLog(`✏️ Mengupdate titik ID: ${id}...`, 'info');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'update');
+        formData.append('data', JSON.stringify({ id, ...data }));
         
-        await new Promise(resolve => setTimeout(resolve, 200));
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
         
-      } catch (error) {
-        errorCount++;
-        addLog(`❌ [${i+1}/${pointsData.length}] Error: ${error.message}`, 'error');
-      }
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                addLog(`✅ Titik "${data.dusun}" berhasil diupdate`, 'success');
+                await loadDataFromSheets();
+                return true;
+            }
+        }
+        throw new Error('Gagal mengupdate');
+    } catch (error) {
+        addLog(`❌ Gagal mengupdate: ${error.message}`, 'error');
+        return false;
+    }
+}
+
+async function deletePoint(id) {
+    if (!confirm('Hapus titik ini? Data akan dihapus dari Google Sheets.')) return;
+    
+    const point = pointsData.find(p => p.id === id);
+    addLog(`🗑️ Menghapus titik: ${point?.dusun}...`, 'info');
+    
+    try {
+        const formData = new URLSearchParams();
+        formData.append('action', 'delete');
+        formData.append('id', id.toString());
+        
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: formData.toString()
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                addLog(`✅ Titik "${point?.dusun}" berhasil dihapus`, 'success');
+                await loadDataFromSheets();
+                return true;
+            }
+        }
+        throw new Error('Gagal menghapus');
+    } catch (error) {
+        addLog(`❌ Gagal menghapus: ${error.message}`, 'error');
+        return false;
+    }
+}
+
+// ========== GOOGLE SHEETS SYNC FUNCTIONS ==========
+async function testConnection() {
+    addLog('🔌 Testing connection to Google Sheets...', 'info');
+    try {
+        const response = await fetch(`${API_URL}?action=test&t=${Date.now()}`, { method: 'GET' });
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                addLog('✅ Connection successful!', 'success');
+                document.getElementById('connStatus').innerHTML = 'Terhubung';
+                document.getElementById('connStatus').style.background = '#d1fae5';
+                document.getElementById('connStatus').style.color = '#059669';
+                return true;
+            }
+        }
+        throw new Error('Connection failed');
+    } catch(e) {
+        addLog(`❌ Connection failed: ${e.message}`, 'error');
+        document.getElementById('connStatus').innerHTML = 'Gagal';
+        return false;
+    }
+}
+
+async function pullData() {
+    await loadDataFromSheets();
+    localStorage.setItem('lastSync', new Date().toISOString());
+    updateLastSync();
+}
+
+async function pushData() {
+    if (pointsData.length === 0) {
+        addLog('⚠️ Tidak ada data untuk dipush', 'warning');
+        return;
     }
     
-    addLog(`✅ Selesai: ${successCount} sukses, ${errorCount} gagal`, successCount > 0 ? 'success' : 'error');
-    showToast(`Selesai: ${successCount} sukses, ${errorCount} gagal`, successCount > 0 ? 'success' : 'error');
+    addLog(`📤 Mempush ${pointsData.length} data ke Google Sheets...`, 'info');
+    let success = 0;
     
-    if (successCount > 0) {
-      lastSyncTime = new Date();
-      updateSyncStatus();
+    for (const point of pointsData) {
+        try {
+            const formData = new URLSearchParams();
+            formData.append('action', 'sync');
+            formData.append('data', JSON.stringify(point));
+            
+            const response = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) success++;
+            }
+            await new Promise(r => setTimeout(r, 200));
+        } catch(e) {
+            addLog(`❌ Gagal push ${point.dusun}: ${e.message}`, 'error');
+        }
     }
     
-  } catch (error) {
-    addLog(`❌ Error: ${error.message}`, 'error');
-    showToast('Error: ' + error.message, 'error');
-  } finally {
-    isSyncing = false;
-    if (syncBtn) {
-      syncBtn.disabled = false;
-      syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Sinkronisasi Penuh';
+    addLog(`✅ Berhasil push ${success}/${pointsData.length} data`, success === pointsData.length ? 'success' : 'warning');
+    if (success > 0) {
+        localStorage.setItem('lastSync', new Date().toISOString());
+        updateLastSync();
+        await loadDataFromSheets();
     }
-  }
 }
 
-// ========== CHANGE PASSWORD ==========
-function changePassword(oldPassword, newPassword, confirmPassword) {
-  const encodedOldPassword = btoa(oldPassword);
-  if (encodedOldPassword !== ADMIN_CREDENTIALS.passwordHash) {
-    showToast('Password lama salah!', 'error');
-    return false;
-  }
-  
-  if (newPassword !== confirmPassword) {
-    showToast('Password baru tidak cocok!', 'error');
-    return false;
-  }
-  
-  if (newPassword.length < 4) {
-    showToast('Password minimal 4 karakter!', 'error');
-    return false;
-  }
-  
-  ADMIN_CREDENTIALS.passwordHash = btoa(newPassword);
-  localStorage.setItem('adminPasswordHash', btoa(newPassword));
-  showToast('Password berhasil diubah!', 'success');
-  addLog('🔐 Password admin diubah', 'info');
-  return true;
-}
-
-// ========== LOGIN FUNCTIONS ==========
-function login(username, password) {
-  const encodedPassword = btoa(password);
-  
-  if (username === ADMIN_CREDENTIALS.username && encodedPassword === ADMIN_CREDENTIALS.passwordHash) {
-    isLoggedIn = true;
-    currentAdmin = username;
+// ========== SAMPLE DATA ==========
+async function addSampleData() {
+    const samples = [
+        { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel' },
+        { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL' },
+        { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat' },
+        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel' }
+    ];
     
-    localStorage.setItem('adminLoggedIn', 'true');
-    localStorage.setItem('currentAdmin', username);
-    localStorage.setItem('loginTime', Date.now().toString());
-    
-    showAdminContent();
-    showToast(`Selamat datang, ${username}!`, 'success');
-    return true;
-  }
-  return false;
-}
-
-function logout() {
-  isLoggedIn = false;
-  currentAdmin = null;
-  localStorage.removeItem('adminLoggedIn');
-  localStorage.removeItem('currentAdmin');
-  localStorage.removeItem('loginTime');
-  
-  document.getElementById('adminContent').style.display = 'none';
-  document.getElementById('loginModal').style.display = 'flex';
-  document.getElementById('loginForm').reset();
-  showToast('Anda telah logout', 'info');
-}
-
-function checkLoginStatus() {
-  const savedLogin = localStorage.getItem('adminLoggedIn');
-  const loginTime = localStorage.getItem('loginTime');
-  
-  if (savedLogin === 'true' && loginTime) {
-    const now = Date.now();
-    const loginTimeNum = parseInt(loginTime);
-    if (now - loginTimeNum < 8 * 60 * 60 * 1000) {
-      isLoggedIn = true;
-      currentAdmin = localStorage.getItem('currentAdmin');
-      showAdminContent();
-      return true;
-    } else {
-      logout();
-      return false;
+    for (const s of samples) {
+        await addPoint(s);
+        await new Promise(r => setTimeout(r, 300));
     }
-  }
-  return false;
+    addLog('📝 Sample data telah ditambahkan', 'success');
 }
 
-function showAdminContent() {
-  document.getElementById('loginModal').style.display = 'none';
-  document.getElementById('adminContent').style.display = 'block';
-  document.getElementById('adminName').textContent = currentAdmin || 'Admin';
-  
-  loadApiConfig();
-  loadFromLocalStorage();
-  initEventListeners();
+// ========== SETTINGS ==========
+function saveApiConfig() {
+    const newUrl = document.getElementById('apiUrlInput').value;
+    if (newUrl) {
+        API_URL = newUrl;
+        localStorage.setItem('apiUrl', newUrl);
+        addLog('🔧 URL API telah disimpan', 'success');
+    }
 }
 
-function showLoginError(message) {
-  const errorDiv = document.getElementById('loginError');
-  errorDiv.textContent = message;
-  errorDiv.style.display = 'block';
-  setTimeout(() => {
-    errorDiv.style.display = 'none';
-  }, 3000);
+function changePassword() {
+    const oldPass = document.getElementById('oldPass').value;
+    const newPass = document.getElementById('newPass').value;
+    const confirmPass = document.getElementById('confirmPass').value;
+    
+    if (oldPass !== 'admin123') {
+        addLog('❌ Password lama salah', 'error');
+        return;
+    }
+    if (newPass !== confirmPass) {
+        addLog('❌ Password baru tidak cocok', 'error');
+        return;
+    }
+    if (newPass.length < 4) {
+        addLog('❌ Password minimal 4 karakter', 'error');
+        return;
+    }
+    
+    addLog('✅ Password berhasil diubah (sementara, refresh akan kembali ke default)', 'success');
+    document.getElementById('oldPass').value = '';
+    document.getElementById('newPass').value = '';
+    document.getElementById('confirmPass').value = '';
 }
 
 // ========== EVENT LISTENERS ==========
-function initEventListeners() {
-  // Tab Navigation
-  const tabs = document.querySelectorAll('.nav-item');
-  const views = {
-    dashboard: document.getElementById('dashboardView'),
-    points: document.getElementById('pointsView'),
-    sync: document.getElementById('syncView'),
-    settings: document.getElementById('settingsView')
-  };
-  
-  tabs.forEach(tab => {
-    if (tab.classList.contains('logout-item')) return;
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.getAttribute('data-tab');
-      Object.keys(views).forEach(v => { 
-        if (views[v]) views[v].style.display = 'none'; 
-      });
-      if (target === 'dashboard' && views.dashboard) views.dashboard.style.display = 'block';
-      else if (target === 'points' && views.points) views.points.style.display = 'block';
-      else if (target === 'sync' && views.sync) views.sync.style.display = 'block';
-      else if (target === 'settings' && views.settings) views.settings.style.display = 'block';
-      
-      const mainTitle = document.getElementById('mainTitle');
-      if (mainTitle) {
-        if (target === 'dashboard') mainTitle.innerText = 'Dashboard SIG 2026';
-        else if (target === 'points') mainTitle.innerText = 'Kelola Titik Survei';
-        else if (target === 'sync') mainTitle.innerText = 'Sinkronisasi';
-        else mainTitle.innerText = 'Pengaturan';
-      }
-    });
-  });
-  
-  // Modal Events
-  const addPointBtn = document.getElementById('addPointBtn');
-  if (addPointBtn) {
-    addPointBtn.addEventListener('click', () => {
-      document.getElementById('pointForm').reset();
-      document.getElementById('editId').value = '';
-      document.getElementById('modalTitle').innerText = 'Tambah Titik Baru';
-      document.getElementById('pointModal').style.display = 'flex';
-    });
-  }
-  
-  const closeModalBtn = document.getElementById('closeModalBtn');
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => {
-      document.getElementById('pointModal').style.display = 'none';
-    });
-  }
-  
-  const pointForm = document.getElementById('pointForm');
-  if (pointForm) {
-    pointForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const idEdit = parseInt(document.getElementById('editId').value);
-      const pointData = {
+document.getElementById('addPointBtn').addEventListener('click', () => {
+    document.getElementById('pointForm').reset();
+    document.getElementById('editId').value = '';
+    document.getElementById('modalTitle').innerText = 'Tambah Titik';
+    document.getElementById('pointModal').style.display = 'flex';
+});
+
+document.getElementById('closeModal').addEventListener('click', () => {
+    document.getElementById('pointModal').style.display = 'none';
+});
+
+document.getElementById('pointForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const id = parseInt(document.getElementById('editId').value);
+    const data = {
         dusun: document.getElementById('dusun').value,
         desa: document.getElementById('desa').value,
         kec: document.getElementById('kec').value,
@@ -727,118 +416,37 @@ function initEventListeners() {
         lat: parseFloat(document.getElementById('lat').value),
         lng: parseFloat(document.getElementById('lng').value),
         populasi: parseInt(document.getElementById('populasi').value) || 0,
-        provider: document.getElementById('provider').value,
-        luas: document.getElementById('luas').value,
-        elev: parseInt(document.getElementById('elev').value) || 0,
-        ket: document.getElementById('ket').value
-      };
-      if (idEdit) {
-        updatePoint(idEdit, pointData);
-      } else {
-        addPoint(pointData);
-      }
-      document.getElementById('pointModal').style.display = 'none';
-    });
-  }
-  
-  // Sync Buttons
-  const syncNowBtn = document.getElementById('syncNowBtn');
-  if (syncNowBtn) syncNowBtn.addEventListener('click', fullSyncToSheets);
-  
-  const pushToSheetBtn = document.getElementById('pushToSheetBtn');
-  if (pushToSheetBtn) pushToSheetBtn.addEventListener('click', fullSyncToSheets);
-  
-  const pullFromSheetBtn = document.getElementById('pullFromSheetBtn');
-  if (pullFromSheetBtn) pullFromSheetBtn.addEventListener('click', fetchDataFromSheets);
-  
-  const testConnectionBtn = document.getElementById('testConnectionBtn');
-  if (testConnectionBtn) testConnectionBtn.addEventListener('click', testConnection);
-  
-  const refreshDashboardBtn = document.getElementById('refreshDashboardBtn');
-  if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDataFromSheets);
-  
-  const saveApiConfigBtn = document.getElementById('saveApiConfig');
-  if (saveApiConfigBtn) saveApiConfigBtn.addEventListener('click', saveApiConfig);
-  
-  const resetDataBtn = document.getElementById('resetDataBtn');
-  if (resetDataBtn) resetDataBtn.addEventListener('click', resetToDefault);
-  
-  const addSampleDataBtn = document.getElementById('addSampleDataBtn');
-  if (addSampleDataBtn) addSampleDataBtn.addEventListener('click', addSampleData);
-  
-  const fullSyncBtn = document.getElementById('fullSyncBtn');
-  if (fullSyncBtn) fullSyncBtn.addEventListener('click', fullSyncToSheets);
-  
-  const changePasswordBtn = document.getElementById('changePasswordBtn');
-  if (changePasswordBtn) {
-    changePasswordBtn.addEventListener('click', () => {
-      const oldPass = document.getElementById('oldPassword').value;
-      const newPass = document.getElementById('newPassword').value;
-      const confirmPass = document.getElementById('confirmPassword').value;
-      
-      if (!oldPass || !newPass || !confirmPass) {
-        showToast('Semua field password harus diisi!', 'error');
-        return;
-      }
-      
-      changePassword(oldPass, newPass, confirmPass);
-      
-      document.getElementById('oldPassword').value = '';
-      document.getElementById('newPassword').value = '';
-      document.getElementById('confirmPassword').value = '';
-    });
-  }
-  
-  const searchPoint = document.getElementById('searchPoint');
-  if (searchPoint) searchPoint.addEventListener('input', () => renderTable());
-  
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) logoutBtn.addEventListener('click', logout);
-  
-  // Close modal on outside click
-  window.onclick = (event) => {
-    const modal = document.getElementById('pointModal');
-    if (event.target === modal && modal) modal.style.display = 'none';
-  };
-}
+        provider: document.getElementById('provider').value
+    };
+    
+    if (id) {
+        await updatePoint(id, data);
+    } else {
+        await addPoint(data);
+    }
+    
+    document.getElementById('pointModal').style.display = 'none';
+});
+
+document.getElementById('searchInput')?.addEventListener('input', () => renderTable());
+document.getElementById('refreshBtn').addEventListener('click', () => loadDataFromSheets());
+document.getElementById('refreshPointsBtn').addEventListener('click', () => loadDataFromSheets());
+document.getElementById('testConnBtn').addEventListener('click', testConnection);
+document.getElementById('pullDataBtn').addEventListener('click', pullData);
+document.getElementById('pushDataBtn').addEventListener('click', pushData);
+document.getElementById('saveApiBtn').addEventListener('click', saveApiConfig);
+document.getElementById('changePassBtn').addEventListener('click', changePassword);
+document.getElementById('sampleDataBtn').addEventListener('click', addSampleData);
 
 // ========== INITIALIZATION ==========
-document.addEventListener('DOMContentLoaded', () => {
-  const savedHash = localStorage.getItem('adminPasswordHash');
-  if (savedHash) {
-    ADMIN_CREDENTIALS.passwordHash = savedHash;
-  }
-  
-  if (!checkLoginStatus()) {
-    document.getElementById('loginModal').style.display = 'flex';
-    document.getElementById('adminContent').style.display = 'none';
-  }
-  
-  const loginForm = document.getElementById('loginForm');
-  if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const username = document.getElementById('loginUsername').value;
-      const password = document.getElementById('loginPassword').value;
-      
-      if (login(username, password)) {
-        document.getElementById('loginForm').reset();
-      } else {
-        showLoginError('Username atau password salah! (admin/admin123)');
-      }
-    });
-  }
-  
-  const passwordInput = document.getElementById('loginPassword');
-  if (passwordInput) {
-    passwordInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-      }
-    });
-  }
-});
+const savedUrl = localStorage.getItem('apiUrl');
+if (savedUrl) API_URL = savedUrl;
+document.getElementById('apiUrlInput').value = API_URL;
+
+if (!checkLogin()) {
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('adminApp').style.display = 'none';
+}
 
 // Make functions global for onclick
 window.editPoint = editPoint;
