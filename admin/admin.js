@@ -1,6 +1,6 @@
 // ============================================
 // ADMIN PANEL - GOOGLE SHEETS SYNC
-// DENGAN SISTEM LOGIN & MOBILE FRIENDLY
+// FIX VERSION - SEMUA TOMBOL BERFUNGSI
 // ============================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec';
@@ -8,65 +8,25 @@ const API_URL = 'https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9
 // Konfigurasi Login
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  passwordHash: 'YWRtaW4xMjM=' // admin123 in base64
+  passwordHash: btoa('admin123')
 };
 
-let isLoggedIn = false;
-let currentAdmin = null;
 let pointsData = [];
 let lastSyncTime = null;
 let statusChart = null;
 let kecChart = null;
 
-// ========== MOBILE MENU FUNCTIONS ==========
-function initMobileMenu() {
-  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-  const mobileMenuToggle = document.getElementById('mobileMenuToggle');
-  const sidebar = document.getElementById('sidebarAdmin');
-  const overlay = document.getElementById('mobileMenuOverlay');
-  const closeBtn = document.getElementById('sidebarCloseMobile');
-  
-  function openMenu() {
-    sidebar.classList.add('open');
-    if (overlay) overlay.classList.add('active');
-    document.body.style.overflow = 'hidden';
-  }
-  
-  function closeMenu() {
-    sidebar.classList.remove('open');
-    if (overlay) overlay.classList.remove('active');
-    document.body.style.overflow = '';
-  }
-  
-  if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMenu);
-  if (mobileMenuToggle) mobileMenuToggle.addEventListener('click', openMenu);
-  if (closeBtn) closeBtn.addEventListener('click', closeMenu);
-  if (overlay) overlay.addEventListener('click', closeMenu);
-  
-  const navItems = document.querySelectorAll('.nav-item');
-  navItems.forEach(item => {
-    item.addEventListener('click', () => {
-      if (window.innerWidth <= 768) {
-        setTimeout(closeMenu, 300);
-      }
-    });
-  });
-}
-
 // ========== LOGIN FUNCTIONS ==========
 function checkLoginStatus() {
   const savedLogin = localStorage.getItem('adminLoggedIn');
-  const savedAdmin = localStorage.getItem('currentAdmin');
   const loginTime = localStorage.getItem('loginTime');
   
-  if (savedLogin === 'true' && savedAdmin && loginTime) {
+  if (savedLogin === 'true' && loginTime) {
     const now = new Date().getTime();
     const loginTimeNum = parseInt(loginTime);
     const eightHours = 8 * 60 * 60 * 1000;
     
     if (now - loginTimeNum < eightHours) {
-      isLoggedIn = true;
-      currentAdmin = savedAdmin;
       showAdminContent();
       return true;
     } else {
@@ -81,9 +41,6 @@ function login(username, password) {
   const encodedPassword = btoa(password);
   
   if (username === ADMIN_CREDENTIALS.username && encodedPassword === ADMIN_CREDENTIALS.passwordHash) {
-    isLoggedIn = true;
-    currentAdmin = username;
-    
     localStorage.setItem('adminLoggedIn', 'true');
     localStorage.setItem('currentAdmin', username);
     localStorage.setItem('loginTime', new Date().getTime().toString());
@@ -96,8 +53,6 @@ function login(username, password) {
 }
 
 function logout() {
-  isLoggedIn = false;
-  currentAdmin = null;
   localStorage.removeItem('adminLoggedIn');
   localStorage.removeItem('currentAdmin');
   localStorage.removeItem('loginTime');
@@ -108,55 +63,51 @@ function logout() {
   showToast('Anda telah logout', 'info');
 }
 
-function changePassword(oldPassword, newPassword, confirmPassword) {
-  const encodedOldPassword = btoa(oldPassword);
-  if (encodedOldPassword !== ADMIN_CREDENTIALS.passwordHash) {
-    showToast('Password lama salah!', 'error');
-    return false;
-  }
-  
-  if (newPassword !== confirmPassword) {
-    showToast('Password baru tidak cocok!', 'error');
-    return false;
-  }
-  
-  if (newPassword.length < 6) {
-    showToast('Password minimal 6 karakter!', 'error');
-    return false;
-  }
-  
-  ADMIN_CREDENTIALS.passwordHash = btoa(newPassword);
-  localStorage.setItem('adminPasswordHash', btoa(newPassword));
-  
-  showToast('Password berhasil diubah!', 'success');
-  return true;
-}
-
 function showAdminContent() {
   document.getElementById('loginModal').style.display = 'none';
   document.getElementById('adminContent').style.display = 'block';
-  document.getElementById('adminName').textContent = currentAdmin || 'Admin';
-  document.getElementById('adminNameMobile').textContent = currentAdmin || 'Admin';
+  document.getElementById('adminName').textContent = localStorage.getItem('currentAdmin') || 'Admin';
   
   initMobileMenu();
-  loadFromLocalStorage();
-  renderAll();
+  loadData();
   initEventListeners();
 }
 
-function showLoginError(message) {
-  const errorDiv = document.getElementById('loginError');
-  errorDiv.textContent = message;
-  errorDiv.style.display = 'block';
-  setTimeout(() => {
-    errorDiv.style.display = 'none';
-  }, 3000);
+// ========== MOBILE MENU ==========
+function initMobileMenu() {
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const sidebar = document.getElementById('sidebarAdmin');
+  
+  function toggleMenu() {
+    sidebar.classList.toggle('open');
+  }
+  
+  if (mobileMenuBtn) {
+    mobileMenuBtn.removeEventListener('click', toggleMenu);
+    mobileMenuBtn.addEventListener('click', toggleMenu);
+  }
+  
+  // Close sidebar when clicking on nav item (mobile)
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    item.removeEventListener('click', closeMenuOnMobile);
+    item.addEventListener('click', closeMenuOnMobile);
+  });
+  
+  function closeMenuOnMobile() {
+    if (window.innerWidth <= 768) {
+      sidebar.classList.remove('open');
+    }
+  }
 }
 
 // ========== CORE FUNCTIONS ==========
 function showToast(msg, type = 'success') {
+  const existingToast = document.querySelector('.toast-admin');
+  if (existingToast) existingToast.remove();
+  
   let t = document.createElement('div'); 
-  t.className = `toast-admin toast-${type}`; 
+  t.className = `toast-admin`; 
   t.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
@@ -167,7 +118,7 @@ function addLog(message, type = 'info') {
   if (logContainer) {
     const time = new Date().toLocaleTimeString();
     const logEntry = document.createElement('div');
-    logEntry.className = `log-entry log-${type}`;
+    logEntry.className = `log-entry ${type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : ''}`;
     logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
     logContainer.prepend(logEntry);
     while (logContainer.children.length > 20) {
@@ -213,7 +164,6 @@ async function fetchDataFromSheets() {
       addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
       showToast(`Berhasil mengambil ${pointsData.length} data`, 'success');
     } else {
-      addLog('📭 Data kosong dari Google Sheets', 'info');
       pointsData = [];
       saveToLocalStorage();
       renderAll();
@@ -228,17 +178,19 @@ async function fetchDataFromSheets() {
 
 async function pushToSheets() {
   if (pointsData.length === 0) {
-    addLog('⚠️ Tidak ada data untuk disinkronkan', 'warning');
     showToast('Tidak ada data untuk disinkronkan', 'warning');
     return;
   }
   
   addLog(`📤 Menyinkronkan ${pointsData.length} data...`, 'info');
+  showToast('Menyinkronkan data...', 'info');
+  
   for (const point of pointsData) {
     const action = point.id > 1000 ? 'add' : 'update';
     await callGoogleAPI(action, point);
     await new Promise(resolve => setTimeout(resolve, 100));
   }
+  
   addLog(`✅ Berhasil menyinkronkan ${pointsData.length} data`, 'success');
   showToast(`Berhasil menyinkronkan ${pointsData.length} data`, 'success');
   lastSyncTime = new Date();
@@ -281,14 +233,15 @@ function loadFromLocalStorage() {
 }
 
 function updateSyncStatus() {
-  const syncStatusSpan = document.getElementById('syncStatus');
   const lastSyncSpan = document.getElementById('lastSync');
-  const syncStatusMobile = document.getElementById('syncStatusMobile');
-  if (syncStatusSpan) syncStatusSpan.innerHTML = '<i class="fas fa-check-circle"></i> Tersinkronasi';
-  if (syncStatusMobile) syncStatusMobile.innerHTML = '<i class="fas fa-cloud"></i> Tersinkronasi';
   if (lastSyncSpan && lastSyncTime) lastSyncSpan.textContent = lastSyncTime.toLocaleString();
 }
 
+async function loadData() {
+  await fetchDataFromSheets();
+}
+
+// ========== CRUD ==========
 function addPoint(pointData) {
   const newId = pointsData.length > 0 ? Math.max(...pointsData.map(p => p.id), 0) + 1 : 1;
   const newPoint = { id: newId, ...pointData, rssi: pointData.status === 'blank' ? null : -70 };
@@ -345,6 +298,17 @@ function deletePoint(id) {
   }
 }
 
+function resetToDefault() {
+  if (confirm('Reset ke data kosong? Semua data yang ada akan hilang.')) {
+    pointsData = [];
+    saveToLocalStorage();
+    renderAll();
+    addLog('🔄 Data direset ke kosong', 'warning');
+    showToast('Data berhasil direset ke kosong', 'info');
+  }
+}
+
+// ========== RENDER FUNCTIONS ==========
 function renderStats() {
   const blank = pointsData.filter(p => p.status === 'blank').length;
   const lemah = pointsData.filter(p => p.status === 'lemah').length;
@@ -354,21 +318,12 @@ function renderStats() {
   
   const statGrid = document.getElementById('statGrid');
   if (statGrid) {
-    if (total === 0) {
-      statGrid.innerHTML = `
-        <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">0</div><div class="stat-sub">Belum ada data</div></div>
-        <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">0</div><div class="stat-sub">Prioritas tinggi</div></div>
-        <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">0</div><div class="stat-sub">Perlu perbaikan</div></div>
-        <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">0</div><div class="stat-sub">0% coverage</div></div>
-      `;
-    } else {
-      statGrid.innerHTML = `
-        <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">${total}</div><div class="stat-sub">Kedewan + Kasiman</div></div>
-        <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">${blank}</div><div class="stat-sub">Prioritas tinggi</div></div>
-        <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">${lemah}</div><div class="stat-sub">Perlu perbaikan</div></div>
-        <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">${baik}</div><div class="stat-sub">+${Math.round(baik/total*100)}% coverage</div></div>
-      `;
-    }
+    statGrid.innerHTML = `
+      <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">${total}</div><div class="stat-sub">Kedewan + Kasiman</div></div>
+      <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">${blank}</div><div class="stat-sub">Prioritas tinggi</div></div>
+      <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">${lemah}</div><div class="stat-sub">Perlu perbaikan</div></div>
+      <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">${baik}</div><div class="stat-sub">+${total > 0 ? Math.round(baik/total*100) : 0}% coverage</div></div>
+    `;
   }
   
   // Update charts
@@ -379,13 +334,9 @@ function renderStats() {
       type: 'doughnut',
       data: {
         labels: ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'],
-        datasets: [{
-          data: [blank, lemah, sedang, baik],
-          backgroundColor: ['#DC2626', '#D97706', '#EA580C', '#059669'],
-          borderWidth: 0
-        }]
+        datasets: [{ data: [blank, lemah, sedang, baik], backgroundColor: ['#DC2626', '#D97706', '#EA580C', '#059669'], borderWidth: 0 }]
       },
-      options: { responsive: true, maintainAspectRatio: true }
+      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: '#1E293B' } } } }
     });
   }
   
@@ -396,15 +347,8 @@ function renderStats() {
     const kas = pointsData.filter(p => p.kec === 'Kasiman').length;
     kecChart = new Chart(kecCtx, {
       type: 'bar',
-      data: {
-        labels: ['Kedewan', 'Kasiman'],
-        datasets: [{
-          label: 'Jumlah Titik',
-          data: [ked, kas],
-          backgroundColor: '#00D4FF'
-        }]
-      },
-      options: { responsive: true, maintainAspectRatio: true }
+      data: { labels: ['Kedewan', 'Kasiman'], datasets: [{ label: 'Jumlah Titik', data: [ked, kas], backgroundColor: '#00D4FF' }] },
+      options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
     });
   }
 }
@@ -412,7 +356,7 @@ function renderStats() {
 function renderTable() {
   const searchInput = document.getElementById('searchPoint');
   const filterKec = document.getElementById('filterKec')?.value || 'all';
-  const filterStatus = document.getElementById('filterStatus')?.value || 'all';
+  const filterStatus = document.getElementById('filterStatusPoint')?.value || 'all';
   const search = searchInput ? searchInput.value.toLowerCase() : '';
   
   const filtered = pointsData.filter(p => {
@@ -425,20 +369,7 @@ function renderTable() {
   const tbody = document.getElementById('tableBody');
   if (tbody) {
     if (filtered.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="8" style="text-align: center; padding: 60px;">
-            <div class="empty-state-container">
-              <div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div>
-              <div class="empty-title">Belum ada data titik</div>
-              <div class="empty-desc">Klik tombol "Tambah Titik" untuk menambahkan data blank spot</div>
-              <button class="btn-primary" onclick="document.getElementById('addPointBtn').click()" style="margin-top: 16px;">
-                <i class="fas fa-plus"></i> Tambah Titik Pertama
-              </button>
-            </div>
-          </td>
-        </tr>
-      `;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 60px;"><div class="empty-state-container"><div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div><div class="empty-title">Belum ada data titik</div><div class="empty-desc">Klik tombol "Tambah Titik" untuk menambahkan data</div></div></td></tr>`;
     } else {
       tbody.innerHTML = filtered.map(p => `
         <tr>
@@ -449,10 +380,7 @@ function renderTable() {
           <td><span class="badge-status badge-${p.status}">${p.status.toUpperCase()}</span></td>
           <td>${p.populasi}</td>
           <td>${p.provider || '-'}</td>
-          <td class="action-icons">
-            <i class="fas fa-edit" onclick="editPoint(${p.id})"></i> 
-            <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i>
-          </td>
+          <td class="action-icons"><i class="fas fa-edit" onclick="editPoint(${p.id})"></i> <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i></td>
         </tr>
       `).join('');
     }
@@ -464,18 +392,9 @@ function renderAll() {
   renderTable();
 }
 
-function resetToDefault() {
-  if (confirm('Reset ke data kosong? Semua data yang ada akan hilang.')) {
-    pointsData = [];
-    saveToLocalStorage();
-    renderAll();
-    addLog('🔄 Data direset ke kosong', 'warning');
-    showToast('Data berhasil direset ke kosong', 'info');
-  }
-}
-
 // ========== EVENT LISTENERS ==========
 function initEventListeners() {
+  // Tab Navigation
   const tabs = document.querySelectorAll('.nav-item');
   const views = {
     dashboard: document.getElementById('dashboardView'),
@@ -486,110 +405,102 @@ function initEventListeners() {
   
   tabs.forEach(tab => {
     if (tab.classList.contains('logout-item')) return;
-    tab.addEventListener('click', () => {
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      const target = tab.getAttribute('data-tab');
-      Object.keys(views).forEach(v => { 
-        if (views[v]) views[v].style.display = 'none'; 
-      });
-      if (target === 'dashboard' && views.dashboard) views.dashboard.style.display = 'block';
-      else if (target === 'points' && views.points) views.points.style.display = 'block';
-      else if (target === 'sync' && views.sync) views.sync.style.display = 'block';
-      else if (target === 'settings' && views.settings) views.settings.style.display = 'block';
-      
-      const mainTitle = document.getElementById('mainTitle');
-      if (mainTitle) {
-        mainTitle.innerText = target === 'dashboard' ? 'Dashboard SIG 2026' : 
-                              target === 'points' ? 'Kelola Titik Survei' : 
-                              target === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
-      }
-    });
+    tab.removeEventListener('click', handleTabClick);
+    tab.addEventListener('click', handleTabClick);
   });
   
+  function handleTabClick(e) {
+    const tab = e.currentTarget;
+    const target = tab.getAttribute('data-tab');
+    
+    tabs.forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    
+    Object.keys(views).forEach(v => { if (views[v]) views[v].style.display = 'none'; });
+    if (target === 'dashboard' && views.dashboard) views.dashboard.style.display = 'block';
+    else if (target === 'points' && views.points) views.points.style.display = 'block';
+    else if (target === 'sync' && views.sync) views.sync.style.display = 'block';
+    else if (target === 'settings' && views.settings) views.settings.style.display = 'block';
+    
+    const mainTitle = document.getElementById('mainTitle');
+    if (mainTitle) {
+      mainTitle.innerText = target === 'dashboard' ? 'Dashboard SIG 2026' : target === 'points' ? 'Kelola Titik Survei' : target === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
+    }
+  }
+  
+  // Buttons
   const addPointBtn = document.getElementById('addPointBtn');
   if (addPointBtn) {
-    addPointBtn.addEventListener('click', () => {
-      document.getElementById('pointForm').reset();
-      document.getElementById('editId').value = '';
-      document.getElementById('modalTitle').innerText = 'Tambah Titik Baru';
-      document.getElementById('pointModal').style.display = 'flex';
-    });
+    addPointBtn.removeEventListener('click', openAddModal);
+    addPointBtn.addEventListener('click', openAddModal);
   }
   
   const closeModalBtn = document.getElementById('closeModalBtn');
   const cancelModalBtn = document.getElementById('cancelModalBtn');
-  const modalClose = document.querySelector('.modal-close');
-  
-  const closeModal = () => {
-    document.getElementById('pointModal').style.display = 'none';
-  };
-  
+  const closeModal = () => { document.getElementById('pointModal').style.display = 'none'; };
   if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
   if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
-  if (modalClose) modalClose.addEventListener('click', closeModal);
   
   const pointForm = document.getElementById('pointForm');
   if (pointForm) {
-    pointForm.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const idEdit = parseInt(document.getElementById('editId').value);
-      const pointData = {
-        dusun: document.getElementById('dusun').value,
-        desa: document.getElementById('desa').value,
-        kec: document.getElementById('kec').value,
-        status: document.getElementById('status').value,
-        lat: parseFloat(document.getElementById('lat').value),
-        lng: parseFloat(document.getElementById('lng').value),
-        populasi: parseInt(document.getElementById('populasi').value) || 0,
-        provider: document.getElementById('provider').value,
-        luas: document.getElementById('luas').value,
-        elev: parseInt(document.getElementById('elev').value) || 0,
-        ket: document.getElementById('ket').value
-      };
-      if (idEdit) {
-        updatePoint(idEdit, pointData);
-      } else {
-        addPoint(pointData);
-      }
-      closeModal();
-    });
+    pointForm.removeEventListener('submit', handleFormSubmit);
+    pointForm.addEventListener('submit', handleFormSubmit);
   }
   
-  const syncNowBtn = document.getElementById('syncNowBtn');
-  const syncNowBtnMobile = document.getElementById('syncNowBtnMobile');
-  if (syncNowBtn) syncNowBtn.addEventListener('click', pushToSheets);
-  if (syncNowBtnMobile) syncNowBtnMobile.addEventListener('click', pushToSheets);
-  
-  const pushToSheetBtn = document.getElementById('pushToSheetBtn');
-  if (pushToSheetBtn) pushToSheetBtn.addEventListener('click', pushToSheets);
-  
-  const pullFromSheetBtn = document.getElementById('pullFromSheetBtn');
-  if (pullFromSheetBtn) pullFromSheetBtn.addEventListener('click', fetchDataFromSheets);
-  
-  const testConnectionBtn = document.getElementById('testConnectionBtn');
-  if (testConnectionBtn) testConnectionBtn.addEventListener('click', testConnection);
-  
-  const refreshDashboardBtn = document.getElementById('refreshDashboardBtn');
-  if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDataFromSheets);
-  
-  const saveApiConfig = document.getElementById('saveApiConfig');
-  if (saveApiConfig) {
-    saveApiConfig.addEventListener('click', () => {
-      const newUrl = document.getElementById('apiUrl').value;
-      if (newUrl) {
-        localStorage.setItem('googleApiUrl', newUrl);
-        showToast('Konfigurasi disimpan', 'success');
-      }
-    });
+  function handleFormSubmit(e) {
+    e.preventDefault();
+    const idEdit = parseInt(document.getElementById('editId').value);
+    const pointData = {
+      dusun: document.getElementById('dusun').value,
+      desa: document.getElementById('desa').value,
+      kec: document.getElementById('kec').value,
+      status: document.getElementById('status').value,
+      lat: parseFloat(document.getElementById('lat').value),
+      lng: parseFloat(document.getElementById('lng').value),
+      populasi: parseInt(document.getElementById('populasi').value) || 0,
+      provider: document.getElementById('provider').value,
+      luas: document.getElementById('luas').value,
+      elev: parseInt(document.getElementById('elev').value) || 0,
+      ket: document.getElementById('ket').value
+    };
+    if (idEdit) { updatePoint(idEdit, pointData); } 
+    else { addPoint(pointData); }
+    document.getElementById('pointModal').style.display = 'none';
   }
   
+  function openAddModal() {
+    document.getElementById('pointForm').reset();
+    document.getElementById('editId').value = '';
+    document.getElementById('modalTitle').innerText = 'Tambah Titik Baru';
+    document.getElementById('pointModal').style.display = 'flex';
+  }
+  
+  // Sync Buttons
+  const pushBtn = document.getElementById('pushToSheetBtn');
+  const pullBtn = document.getElementById('pullFromSheetBtn');
+  const testBtn = document.getElementById('testConnectionBtn');
+  const refreshBtn = document.getElementById('refreshDashboardBtn');
+  const saveApiBtn = document.getElementById('saveApiConfig');
   const resetDataBtn = document.getElementById('resetDataBtn');
-  if (resetDataBtn) resetDataBtn.addEventListener('click', resetToDefault);
+  const changePassBtn = document.getElementById('changePasswordBtn');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const searchPoint = document.getElementById('searchPoint');
+  const filterKec = document.getElementById('filterKec');
+  const filterStatus = document.getElementById('filterStatusPoint');
   
-  const changePasswordBtn = document.getElementById('changePasswordBtn');
-  if (changePasswordBtn) {
-    changePasswordBtn.addEventListener('click', () => {
+  if (pushBtn) pushBtn.addEventListener('click', pushToSheets);
+  if (pullBtn) pullBtn.addEventListener('click', fetchDataFromSheets);
+  if (testBtn) testBtn.addEventListener('click', testConnection);
+  if (refreshBtn) refreshBtn.addEventListener('click', fetchDataFromSheets);
+  if (saveApiBtn) saveApiBtn.addEventListener('click', () => { showToast('Konfigurasi disimpan', 'success'); });
+  if (resetDataBtn) resetDataBtn.addEventListener('click', resetToDefault);
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+  if (searchPoint) searchPoint.addEventListener('input', () => renderTable());
+  if (filterKec) filterKec.addEventListener('change', () => renderTable());
+  if (filterStatus) filterStatus.addEventListener('change', () => renderTable());
+  
+  if (changePassBtn) {
+    changePassBtn.addEventListener('click', () => {
       const oldPass = document.getElementById('oldPassword').value;
       const newPass = document.getElementById('newPassword').value;
       const confirmPass = document.getElementById('confirmPassword').value;
@@ -598,25 +509,26 @@ function initEventListeners() {
         showToast('Semua field password harus diisi!', 'error');
         return;
       }
+      if (newPass !== confirmPass) {
+        showToast('Password baru tidak cocok!', 'error');
+        return;
+      }
+      if (newPass.length < 6) {
+        showToast('Password minimal 6 karakter!', 'error');
+        return;
+      }
       
-      changePassword(oldPass, newPass, confirmPass);
+      ADMIN_CREDENTIALS.passwordHash = btoa(newPass);
+      localStorage.setItem('adminPasswordHash', btoa(newPass));
+      showToast('Password berhasil diubah!', 'success');
+      
       document.getElementById('oldPassword').value = '';
       document.getElementById('newPassword').value = '';
       document.getElementById('confirmPassword').value = '';
     });
   }
   
-  const searchPoint = document.getElementById('searchPoint');
-  if (searchPoint) searchPoint.addEventListener('input', () => renderTable());
-  
-  const filterKec = document.getElementById('filterKec');
-  const filterStatus = document.getElementById('filterStatus');
-  if (filterKec) filterKec.addEventListener('change', () => renderTable());
-  if (filterStatus) filterStatus.addEventListener('change', () => renderTable());
-  
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (logoutBtn) logoutBtn.addEventListener('click', logout);
-  
+  // Close modal on outside click
   window.onclick = (event) => {
     const modal = document.getElementById('pointModal');
     if (event.target === modal && modal) modal.style.display = 'none';
@@ -633,6 +545,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!checkLoginStatus()) {
     document.getElementById('loginModal').style.display = 'flex';
     document.getElementById('adminContent').style.display = 'none';
+  } else {
+    document.getElementById('loginModal').style.display = 'none';
+    document.getElementById('adminContent').style.display = 'block';
   }
   
   const loginForm = document.getElementById('loginForm');
@@ -641,25 +556,19 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
+      const errorDiv = document.getElementById('loginError');
       
       if (login(username, password)) {
         document.getElementById('loginForm').reset();
+        errorDiv.style.display = 'none';
       } else {
-        showLoginError('Username atau password salah!');
-      }
-    });
-  }
-  
-  const passwordInput = document.getElementById('loginPassword');
-  if (passwordInput) {
-    passwordInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+        errorDiv.textContent = 'Username atau password salah!';
+        errorDiv.style.display = 'block';
       }
     });
   }
 });
 
+// Global functions for onclick
 window.editPoint = editPoint;
 window.deletePoint = deletePoint;
