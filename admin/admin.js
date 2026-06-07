@@ -1,21 +1,56 @@
 // ============================================
 // ADMIN PANEL - GOOGLE SHEETS SYNC
-// DENGAN SISTEM LOGIN
+// DENGAN SISTEM LOGIN & MOBILE FRIENDLY
 // ============================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec';
 
-// Konfigurasi Login (Username & Password)
-// Default: admin / admin123
+// Konfigurasi Login
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  passwordHash: 'YWRtaW4xMjM=' // admin123 in base64
+  passwordHash: 'YWRtaW4xMjM='
 };
 
 let isLoggedIn = false;
 let currentAdmin = null;
 let pointsData = [];
 let lastSyncTime = null;
+
+// ========== MOBILE MENU FUNCTIONS ==========
+function initMobileMenu() {
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+  const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+  const sidebar = document.getElementById('sidebarAdmin');
+  const overlay = document.getElementById('mobileMenuOverlay');
+  const closeBtn = document.getElementById('sidebarCloseMobile');
+  
+  function openMenu() {
+    sidebar.classList.add('open');
+    if (overlay) overlay.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeMenu() {
+    sidebar.classList.remove('open');
+    if (overlay) overlay.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+  
+  if (mobileMenuBtn) mobileMenuBtn.addEventListener('click', openMenu);
+  if (mobileMenuToggle) mobileMenuToggle.addEventListener('click', openMenu);
+  if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+  if (overlay) overlay.addEventListener('click', closeMenu);
+  
+  // Close menu when clicking on nav item (mobile)
+  const navItems = document.querySelectorAll('.nav-item');
+  navItems.forEach(item => {
+    item.addEventListener('click', () => {
+      if (window.innerWidth <= 768) {
+        setTimeout(closeMenu, 300);
+      }
+    });
+  });
+}
 
 // ========== LOGIN FUNCTIONS ==========
 function checkLoginStatus() {
@@ -100,7 +135,9 @@ function showAdminContent() {
   document.getElementById('loginModal').style.display = 'none';
   document.getElementById('adminContent').style.display = 'block';
   document.getElementById('adminName').textContent = currentAdmin || 'Admin';
+  document.getElementById('adminNameMobile').textContent = currentAdmin || 'Admin';
   
+  initMobileMenu();
   loadFromLocalStorage();
   renderAll();
   initEventListeners();
@@ -245,7 +282,9 @@ function loadFromLocalStorage() {
 function updateSyncStatus() {
   const syncStatusSpan = document.getElementById('syncStatus');
   const lastSyncSpan = document.getElementById('lastSync');
+  const syncStatusMobile = document.getElementById('syncStatusMobile');
   if (syncStatusSpan) syncStatusSpan.innerHTML = '<i class="fas fa-check-circle"></i> Tersinkronasi';
+  if (syncStatusMobile) syncStatusMobile.innerHTML = '<i class="fas fa-cloud"></i> Tersinkronasi';
   if (lastSyncSpan && lastSyncTime) lastSyncSpan.textContent = lastSyncTime.toLocaleString();
 }
 
@@ -335,14 +374,17 @@ function renderStats() {
 function renderTable() {
   const searchInput = document.getElementById('searchPoint');
   const search = searchInput ? searchInput.value.toLowerCase() : '';
-  const filtered = pointsData.filter(p => p.dusun.toLowerCase().includes(search) || p.desa.toLowerCase().includes(search));
+  const filtered = pointsData.filter(p => 
+    p.dusun.toLowerCase().includes(search) || 
+    p.desa.toLowerCase().includes(search)
+  );
   
   const tbody = document.getElementById('tableBody');
   if (tbody) {
     if (filtered.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" style="text-align: center; padding: 60px;">
+          <td colspan="8" style="text-align: center; padding: 40px;">
             <div class="empty-state-container">
               <div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div>
               <div class="empty-title">Belum ada data titik</div>
@@ -364,7 +406,10 @@ function renderTable() {
           <td><span class="badge-status badge-${p.status}">${p.status.toUpperCase()}</span></td>
           <td>${p.populasi}</td>
           <td>${p.provider || '-'}</td>
-          <td class="action-icons"><i class="fas fa-edit" onclick="editPoint(${p.id})"></i> <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i></td>
+          <td class="action-icons">
+            <i class="fas fa-edit" onclick="editPoint(${p.id})"></i> 
+            <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i>
+          </td>
         </tr>
       `).join('');
     }
@@ -402,7 +447,9 @@ function initEventListeners() {
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
       const target = tab.getAttribute('data-tab');
-      Object.keys(views).forEach(v => { if (views[v]) views[v].style.display = 'none'; });
+      Object.keys(views).forEach(v => { 
+        if (views[v]) views[v].style.display = 'none'; 
+      });
       if (target === 'dashboard' && views.dashboard) views.dashboard.style.display = 'block';
       else if (target === 'points' && views.points) views.points.style.display = 'block';
       else if (target === 'sync' && views.sync) views.sync.style.display = 'block';
@@ -428,11 +475,16 @@ function initEventListeners() {
   }
   
   const closeModalBtn = document.getElementById('closeModalBtn');
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => {
-      document.getElementById('pointModal').style.display = 'none';
-    });
-  }
+  const cancelModalBtn = document.getElementById('cancelModalBtn');
+  const modalClose = document.querySelector('.modal-close');
+  
+  const closeModal = () => {
+    document.getElementById('pointModal').style.display = 'none';
+  };
+  
+  if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
+  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+  if (modalClose) modalClose.addEventListener('click', closeModal);
   
   const pointForm = document.getElementById('pointForm');
   if (pointForm) {
@@ -457,12 +509,14 @@ function initEventListeners() {
       } else {
         addPoint(pointData);
       }
-      document.getElementById('pointModal').style.display = 'none';
+      closeModal();
     });
   }
   
   const syncNowBtn = document.getElementById('syncNowBtn');
+  const syncNowBtnMobile = document.getElementById('syncNowBtnMobile');
   if (syncNowBtn) syncNowBtn.addEventListener('click', pushToSheets);
+  if (syncNowBtnMobile) syncNowBtnMobile.addEventListener('click', pushToSheets);
   
   const pushToSheetBtn = document.getElementById('pushToSheetBtn');
   if (pushToSheetBtn) pushToSheetBtn.addEventListener('click', pushToSheets);
