@@ -1,9 +1,9 @@
 // ============================================
 // ADMIN PANEL - DIRECT SYNC TO GOOGLE SHEETS
-// FIXED VERSION
+// FIXED VERSION - NO FAILED TO FETCH
 // ============================================
 
-let API_URL = 'https://script.google.com/macros/s/AKfycbyrr4wwo7LVoh3_MssV3JmKdnkSF2g9vsidrRBvqwQBJpRbbHuFYmqAPg5pAWRDodrA/exec';
+let API_URL = 'https://script.google.com/macros/s/AKfycbzj2DbZa8ugSEifHlveHbRljZkEJYXIQfM1OjnBWDsuxKJxMmPLyM_-ITuUJqdwKMrPXw/exec';
 let pointsData = [];
 let isLoading = false;
 
@@ -64,6 +64,26 @@ document.querySelectorAll('.menu-item').forEach(item => {
     });
 });
 
+// ========== HELPER FUNCTION FOR FETCH WITH TIMEOUT ==========
+async function fetchWithTimeout(url, options, timeout = 30000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'omit'
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        throw error;
+    }
+}
+
 // ========== LOAD DATA FROM GOOGLE SHEETS ==========
 async function loadDataFromSheets() {
     if (isLoading) return;
@@ -71,7 +91,11 @@ async function loadDataFromSheets() {
     addLog('📥 Mengambil data dari Google Sheets...', 'info');
     
     try {
-        const response = await fetch(`${API_URL}?action=getData&t=${Date.now()}`, { method: 'GET' });
+        const url = `${API_URL}?action=getData&t=${Date.now()}`;
+        addLog(`🌐 Fetching: ${url.substring(0, 80)}...`, 'info');
+        
+        const response = await fetchWithTimeout(url, { method: 'GET' }, 30000);
+        
         if (response.ok) {
             const result = await response.json();
             if (result.success && result.data) {
@@ -98,7 +122,12 @@ async function loadDataFromSheets() {
             throw new Error(`HTTP ${response.status}`);
         }
     } catch (error) {
-        addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
+        console.error('Load data error:', error);
+        if (error.name === 'AbortError') {
+            addLog('❌ Timeout: Server tidak merespon', 'error');
+        } else {
+            addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
+        }
         pointsData = [];
     }
     
@@ -159,10 +188,11 @@ function addLog(msg, type = 'info') {
     const logDiv = document.getElementById('logList');
     if (logDiv) {
         const time = new Date().toLocaleTimeString();
-        logDiv.innerHTML = `<div class="log-entry log-${type}">[${time}] ${msg}</div>` + logDiv.innerHTML;
+        const colorClass = type === 'error' ? 'log-error' : (type === 'success' ? 'log-success' : 'log-info');
+        logDiv.innerHTML = `<div class="log-entry ${colorClass}">[${time}] ${msg}</div>` + logDiv.innerHTML;
         if (logDiv.children.length > 30) logDiv.removeChild(logDiv.lastChild);
     }
-    console.log(msg);
+    console.log(`[${type.toUpperCase()}]`, msg);
 }
 
 function updateLastSync() {
@@ -175,14 +205,20 @@ async function addPoint(data) {
     addLog(`➕ Menambahkan titik: ${data.dusun}...`, 'info');
     
     try {
-        const response = await fetch(API_URL, {
+        const payload = {
+            action: 'add',
+            data: data
+        };
+        
+        addLog(`📤 Sending to: ${API_URL}`, 'info');
+        
+        const response = await fetchWithTimeout(API_URL, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'add',
-                data: data
-            })
-        });
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }, 30000);
         
         if (response.ok) {
             const result = await response.json();
@@ -194,10 +230,15 @@ async function addPoint(data) {
                 throw new Error(result.message || 'Gagal menambahkan');
             }
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
     } catch (error) {
-        addLog(`❌ Gagal menambahkan: ${error.message}`, 'error');
+        console.error('Add point error:', error);
+        if (error.name === 'AbortError') {
+            addLog(`❌ Timeout: Server tidak merespon saat menambah "${data.dusun}"`, 'error');
+        } else {
+            addLog(`❌ Gagal menambahkan "${data.dusun}": ${error.message}`, 'error');
+        }
         return false;
     }
 }
@@ -223,14 +264,16 @@ async function updatePoint(id, data) {
     addLog(`✏️ Mengupdate titik ID: ${id}...`, 'info');
     
     try {
-        const response = await fetch(API_URL, {
+        const payload = {
+            action: 'update',
+            data: { id, ...data }
+        };
+        
+        const response = await fetchWithTimeout(API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                action: 'update',
-                data: { id, ...data }
-            })
-        });
+            body: JSON.stringify(payload)
+        }, 30000);
         
         if (response.ok) {
             const result = await response.json();
@@ -245,41 +288,78 @@ async function updatePoint(id, data) {
             throw new Error(`HTTP ${response.status}`);
         }
     } catch (error) {
-        addLog(`❌ Gagal mengupdate: ${error.message}`, 'error');
+        if (error.name === 'AbortError') {
+            addLog(`❌ Timeout: Server tidak merespon saat update`, 'error');
+        } else {
+            addLog(`❌ Gagal mengupdate: ${error.message}`, 'error');
+        }
         return false;
     }
 }
 
 async function deletePoint(id) {
-    if (!confirm('Hapus titik ini? Data akan dihapus dari Google Sheets.')) return;
+    if (!confirm('⚠️ Hapus titik ini? Data akan dihapus permanen dari Google Sheets.')) return;
     
     const point = pointsData.find(p => p.id === id);
-    addLog(`🗑️ Menghapus titik: ${point?.dusun || id}...`, 'info');
+    const pointName = point?.dusun || `ID ${id}`;
+    addLog(`🗑️ Menghapus titik: ${pointName}...`, 'info');
     
     try {
-        const response = await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+        // Try both methods: JSON and URL-encoded
+        let response;
+        
+        // Method 1: Try JSON first
+        try {
+            const payload = {
                 action: 'delete',
                 id: id
-            })
-        });
+            };
+            
+            response = await fetchWithTimeout(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }, 30000);
+        } catch (jsonError) {
+            addLog(`⚠️ JSON method failed, trying URL encoded...`, 'warning');
+            
+            // Method 2: Fallback to URL encoded
+            const formData = new URLSearchParams();
+            formData.append('action', 'delete');
+            formData.append('id', id.toString());
+            
+            response = await fetchWithTimeout(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData.toString()
+            }, 30000);
+        }
         
-        if (response.ok) {
+        if (response && response.ok) {
             const result = await response.json();
             if (result.success) {
-                addLog(`✅ Titik "${point?.dusun}" berhasil dihapus`, 'success');
+                addLog(`✅ Titik "${pointName}" berhasil dihapus dari Google Sheets`, 'success');
+                // Refresh data after delete
                 await loadDataFromSheets();
                 return true;
             } else {
-                throw new Error(result.message || 'Gagal menghapus');
+                throw new Error(result.message || 'Gagal menghapus dari server');
             }
         } else {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(response ? `HTTP ${response.status}` : 'No response');
         }
     } catch (error) {
-        addLog(`❌ Gagal menghapus: ${error.message}`, 'error');
+        console.error('Delete error:', error);
+        if (error.name === 'AbortError') {
+            addLog(`❌ Timeout: Server tidak merespon saat menghapus "${pointName}"`, 'error');
+        } else {
+            addLog(`❌ Gagal menghapus "${pointName}": ${error.message}`, 'error');
+        }
+        
+        // Offer to retry
+        if (confirm(`Gagal menghapus "${pointName}". Ingin mencoba lagi?`)) {
+            return deletePoint(id);
+        }
         return false;
     }
 }
@@ -288,26 +368,35 @@ async function deletePoint(id) {
 async function testConnection() {
     addLog('🔌 Testing connection to Google Sheets...', 'info');
     try {
-        const response = await fetch(`${API_URL}?action=test&t=${Date.now()}`, { method: 'GET' });
+        const url = `${API_URL}?action=test&t=${Date.now()}`;
+        const response = await fetchWithTimeout(url, { method: 'GET' }, 15000);
+        
         if (response.ok) {
             const result = await response.json();
             if (result.success) {
                 addLog('✅ Connection successful!', 'success');
                 const connStatus = document.getElementById('connStatus');
                 if (connStatus) {
-                    connStatus.innerHTML = 'Terhubung';
+                    connStatus.innerHTML = '✅ Terhubung';
                     connStatus.style.background = '#d1fae5';
                     connStatus.style.color = '#059669';
                 }
                 return true;
+            } else {
+                throw new Error(result.message || 'Connection failed');
             }
         }
-        throw new Error('Connection failed');
+        throw new Error(`HTTP ${response.status}`);
     } catch(e) {
-        addLog(`❌ Connection failed: ${e.message}`, 'error');
+        console.error('Test connection error:', e);
+        if (e.name === 'AbortError') {
+            addLog('❌ Connection timeout: Server tidak merespon', 'error');
+        } else {
+            addLog(`❌ Connection failed: ${e.message}`, 'error');
+        }
         const connStatus = document.getElementById('connStatus');
         if (connStatus) {
-            connStatus.innerHTML = 'Gagal';
+            connStatus.innerHTML = '❌ Gagal';
             connStatus.style.background = '#fee2e2';
             connStatus.style.color = '#dc2626';
         }
@@ -316,9 +405,11 @@ async function testConnection() {
 }
 
 async function pullData() {
+    addLog('📥 Pulling latest data from Google Sheets...', 'info');
     await loadDataFromSheets();
     localStorage.setItem('lastSync', new Date().toISOString());
     updateLastSync();
+    addLog('✅ Pull data selesai', 'success');
 }
 
 async function pushData() {
@@ -329,29 +420,45 @@ async function pushData() {
     
     addLog(`📤 Mempush ${pointsData.length} data ke Google Sheets...`, 'info');
     let success = 0;
+    let failed = 0;
     
     for (const point of pointsData) {
         try {
-            const response = await fetch(API_URL, {
+            const payload = {
+                action: 'add',
+                data: point
+            };
+            
+            const response = await fetchWithTimeout(API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'add',
-                    data: point
-                })
-            });
+                body: JSON.stringify(payload)
+            }, 15000);
             
             if (response.ok) {
                 const result = await response.json();
-                if (result.success) success++;
+                if (result.success) {
+                    success++;
+                    addLog(`✅ Push ${point.dusun} berhasil`, 'success');
+                } else {
+                    failed++;
+                    addLog(`⚠️ Push ${point.dusun} gagal: ${result.message}`, 'warning');
+                }
+            } else {
+                failed++;
+                addLog(`⚠️ Push ${point.dusun} gagal: HTTP ${response.status}`, 'warning');
             }
-            await new Promise(r => setTimeout(r, 200));
+            
+            await new Promise(r => setTimeout(r, 300));
         } catch(e) {
+            failed++;
             addLog(`❌ Gagal push ${point.dusun}: ${e.message}`, 'error');
         }
     }
     
-    addLog(`✅ Berhasil push ${success}/${pointsData.length} data`, success === pointsData.length ? 'success' : 'warning');
+    addLog(`📊 Selesai: ${success} berhasil, ${failed} gagal dari ${pointsData.length} data`, 
+           failed === 0 ? 'success' : 'warning');
+    
     if (success > 0) {
         localStorage.setItem('lastSync', new Date().toISOString());
         updateLastSync();
@@ -362,26 +469,32 @@ async function pushData() {
 // ========== SAMPLE DATA ==========
 async function addSampleData() {
     const samples = [
-        { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel', rssi: -95, elev: 45 },
-        { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL', rssi: -85, elev: 52 },
-        { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat', rssi: -75, elev: 48 },
-        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel', rssi: -65, elev: 50 }
+        { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel', rssi: -95, elev: 45, ket: 'Area perbukitan, sinyal sangat lemah' },
+        { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL', rssi: -85, elev: 52, ket: 'Jarak jauh dari BTS' },
+        { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat', rssi: -75, elev: 48, ket: 'Sinyal cukup stabil' },
+        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel', rssi: -65, elev: 50, ket: 'Area pemukiman padat, sinyal baik' },
+        { dusun: 'Dk. Cepoko', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.100, lng: 111.620, populasi: 580, provider: '-', rssi: -99, elev: 60, ket: 'Lembah, tidak ada sinyal' },
+        { dusun: 'Dk. Mulyo', desa: 'Kasiman', kec: 'Kasiman', status: 'lemah', lat: -7.120, lng: 111.650, populasi: 940, provider: 'Telkomsel', rssi: -88, elev: 42, ket: 'Sinyal tidak stabil' }
     ];
     
+    addLog('📝 Menambahkan sample data...', 'info');
     for (const s of samples) {
         await addPoint(s);
-        await new Promise(r => setTimeout(r, 300));
+        await new Promise(r => setTimeout(r, 500));
     }
-    addLog('📝 Sample data telah ditambahkan', 'success');
+    addLog(`✅ Selesai menambahkan ${samples.length} sample data`, 'success');
 }
 
 // ========== SETTINGS ==========
 function saveApiConfig() {
     const newUrl = document.getElementById('apiUrlInput').value;
-    if (newUrl) {
-        API_URL = newUrl;
-        localStorage.setItem('apiUrl', newUrl);
+    if (newUrl && newUrl.trim()) {
+        API_URL = newUrl.trim();
+        localStorage.setItem('apiUrl', API_URL);
         addLog('🔧 URL API telah disimpan', 'success');
+        addLog('💡 Silakan klik "Test Connection" untuk memverifikasi koneksi', 'info');
+    } else {
+        addLog('❌ URL API tidak boleh kosong', 'error');
     }
 }
 
@@ -517,11 +630,22 @@ if (savedUrl) API_URL = savedUrl;
 const apiUrlInput = document.getElementById('apiUrlInput');
 if (apiUrlInput) apiUrlInput.value = API_URL;
 
-if (!checkLogin()) {
-    document.getElementById('loginPage').style.display = 'flex';
-    document.getElementById('adminApp').style.display = 'none';
+// Load sample data from localStorage or add if empty
+async function initialize() {
+    if (!checkLogin()) {
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('adminApp').style.display = 'none';
+    }
 }
+
+initialize();
 
 // Make functions global for onclick
 window.editPoint = editPoint;
 window.deletePoint = deletePoint;
+window.testConnection = testConnection;
+window.pullData = pullData;
+window.pushData = pushData;
+window.saveApiConfig = saveApiConfig;
+window.changePassword = changePassword;
+window.addSampleData = addSampleData;
