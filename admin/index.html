@@ -2,7 +2,8 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+  <meta name="theme-color" content="#F1F5F9">
   <title>Admin Panel SIG Blank Spot - Google Sheets Sync</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -37,39 +38,75 @@
       </button>
     </form>
     <div class="login-footer">
-      <small>© BPS Bojonegoro 2026</small>
+      <small>© PTI IKIP PGRI BOJONEGORO 2026</small>
     </div>
   </div>
 </div>
 
 <!-- MAIN ADMIN CONTENT (Hidden by default) -->
 <div id="adminContent" style="display: none;">
+  <!-- Mobile Menu Toggle Button -->
+  <div class="mobile-menu-toggle" id="mobileMenuToggle">
+    <i class="fas fa-bars"></i>
+  </div>
+  <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+
   <div class="admin-wrapper">
     <div class="sidebar-admin" id="sidebarAdmin">
-      <div class="logo-area">
-        <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
-        <div class="logo-text">
-          <h2>Admin SIG Blank Spot</h2>
-          <p>Google Sheets Sync</p>
+      <div class="sidebar-header-mobile">
+        <div class="logo-area">
+          <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
+          <div class="logo-text">
+            <h2>Admin SIG Blank Spot</h2>
+            <p>Google Sheets Sync</p>
+          </div>
         </div>
+        <button class="sidebar-close-mobile" id="sidebarCloseMobile">
+          <i class="fas fa-times"></i>
+        </button>
       </div>
-      <div class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
-      <div class="nav-item" data-tab="points"><i class="fas fa-map-marker-alt"></i> Kelola Titik</div>
-      <div class="nav-item" data-tab="sync"><i class="fas fa-cloud-upload-alt"></i> Sinkronisasi</div>
-      <div class="nav-item" data-tab="settings"><i class="fas fa-cog"></i> Pengaturan</div>
-      <div class="nav-item logout-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</div>
+      <div class="nav-item active" data-tab="dashboard">
+        <i class="fas fa-tachometer-alt"></i> 
+        <span>Dashboard</span>
+      </div>
+      <div class="nav-item" data-tab="points">
+        <i class="fas fa-map-marker-alt"></i> 
+        <span>Kelola Titik</span>
+      </div>
+      <div class="nav-item" data-tab="sync">
+        <i class="fas fa-cloud-upload-alt"></i> 
+        <span>Sinkronisasi</span>
+      </div>
+      <div class="nav-item" data-tab="settings">
+        <i class="fas fa-cog"></i> 
+        <span>Pengaturan</span>
+      </div>
+      <div class="nav-item logout-item" id="logoutBtn">
+        <i class="fas fa-sign-out-alt"></i> 
+        <span>Logout</span>
+      </div>
     </div>
 
     <div class="main-content">
+      <!-- Top Bar Mobile Friendly -->
       <div class="top-bar-admin">
+        <div class="mobile-menu-btn" id="mobileMenuBtn">
+          <i class="fas fa-bars"></i>
+        </div>
         <div class="page-title" id="mainTitle">Dashboard SIG 2026</div>
-        <div class="admin-badge">
+        <div class="admin-badge desktop-only">
           <i class="fas fa-user-shield"></i> 
           <span id="adminName">Admin</span>
-          <span style="margin: 0 8px">|</span>
-          <i class="fas fa-cloud"></i> 
-          <span id="syncStatus">Terhubung ke Google Sheets</span>
         </div>
+      </div>
+
+      <!-- User Info Mobile -->
+      <div class="user-info-mobile mobile-only" id="userInfoMobile">
+        <i class="fas fa-user-circle"></i>
+        <span id="adminNameMobile">Admin</span>
+        <span class="sync-status-mobile" id="syncStatusMobile">
+          <i class="fas fa-cloud"></i> Tersinkronasi
+        </span>
       </div>
 
       <div id="dashboardView">
@@ -77,7 +114,9 @@
         <div class="data-section">
           <div class="section-header">
             <h3><i class="fas fa-chart-simple"></i> Ringkasan Cepat</h3>
-            <button class="btn-outline" id="refreshDashboardBtn"><i class="fas fa-rotate-right"></i> Sync Data</button>
+            <button class="btn-outline" id="refreshDashboardBtn">
+              <i class="fas fa-rotate-right"></i> <span class="desktop-only">Sync Data</span>
+            </button>
           </div>
         </div>
       </div>
@@ -86,13 +125,22 @@
         <div class="data-section">
           <div class="section-header">
             <h3><i class="fas fa-database"></i> Daftar Titik Survei</h3>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-              <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="searchPoint" placeholder="Cari dusun, desa..."></div>
-              <button class="btn-primary" id="addPointBtn"><i class="fas fa-plus"></i> Tambah Titik</button>
-              <button class="btn-outline" id="syncNowBtn"><i class="fas fa-cloud-upload-alt"></i> Sync ke Google Sheets</button>
+            <div class="action-buttons">
+              <button class="btn-primary" id="addPointBtn">
+                <i class="fas fa-plus"></i> <span class="desktop-only">Tambah Titik</span>
+              </button>
             </div>
           </div>
-          <div style="overflow-x: auto;">
+          <div class="search-filter-bar">
+            <div class="search-bar">
+              <i class="fas fa-search"></i>
+              <input type="text" id="searchPoint" placeholder="Cari dusun, desa...">
+            </div>
+            <button class="btn-outline mobile-sync-btn" id="syncNowBtnMobile">
+              <i class="fas fa-cloud-upload-alt"></i>
+            </button>
+          </div>
+          <div class="table-container">
             <table id="pointsTable">
               <thead>
                 <tr><th>ID</th><th>Dusun</th><th>Desa</th><th>Kecamatan</th><th>Status</th><th>Populasi</th><th>Provider</th><th>Aksi</th></tr>
@@ -116,9 +164,15 @@
               </div>
             </div>
             <div class="sync-actions">
-              <button class="btn-primary" id="pushToSheetBtn"><i class="fas fa-upload"></i> Push ke Google Sheets</button>
-              <button class="btn-outline" id="pullFromSheetBtn"><i class="fas fa-download"></i> Pull dari Google Sheets</button>
-              <button class="btn-outline" id="testConnectionBtn"><i class="fas fa-plug"></i> Test Connection</button>
+              <button class="btn-primary" id="pushToSheetBtn">
+                <i class="fas fa-upload"></i> <span class="desktop-only">Push ke Google Sheets</span>
+              </button>
+              <button class="btn-outline" id="pullFromSheetBtn">
+                <i class="fas fa-download"></i> <span class="desktop-only">Pull dari Google Sheets</span>
+              </button>
+              <button class="btn-outline" id="testConnectionBtn">
+                <i class="fas fa-plug"></i> <span class="desktop-only">Test Connection</span>
+              </button>
             </div>
           </div>
           <div class="sync-log">
@@ -135,10 +189,12 @@
           <h3><i class="fas fa-key"></i> Konfigurasi API</h3>
           <div class="form-group">
             <label>Google Apps Script URL</label>
-            <input type="text" id="apiUrl" value="https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec" style="width: 100%;">
+            <input type="text" id="apiUrl" value="https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec">
             <small>URL Web App dari Google Apps Script</small>
           </div>
-          <button class="btn-primary" id="saveApiConfig"><i class="fas fa-save"></i> Simpan Konfigurasi</button>
+          <button class="btn-primary" id="saveApiConfig">
+            <i class="fas fa-save"></i> Simpan Konfigurasi
+          </button>
           <hr>
           <h3><i class="fas fa-user-lock"></i> Ubah Password</h3>
           <div class="form-group">
@@ -153,9 +209,13 @@
             <label>Konfirmasi Password Baru</label>
             <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
           </div>
-          <button class="btn-primary" id="changePasswordBtn"><i class="fas fa-key"></i> Ubah Password</button>
+          <button class="btn-primary" id="changePasswordBtn">
+            <i class="fas fa-key"></i> Ubah Password
+          </button>
           <hr>
-          <button class="btn-primary" id="resetDataBtn"><i class="fas fa-trash-alt"></i> Reset Data Kosong</button>
+          <button class="btn-primary" id="resetDataBtn">
+            <i class="fas fa-trash-alt"></i> Reset Data Kosong
+          </button>
         </div>
       </div>
     </div>
@@ -164,7 +224,10 @@
   <!-- MODAL FORM -->
   <div id="pointModal" class="modal">
     <div class="modal-content">
-      <h3 id="modalTitle">Tambah / Edit Titik</h3>
+      <div class="modal-header">
+        <h3 id="modalTitle">Tambah / Edit Titik</h3>
+        <button class="modal-close" id="closeModalBtn">&times;</button>
+      </div>
       <form id="pointForm">
         <input type="hidden" id="editId">
         <div class="form-row">
@@ -188,7 +251,10 @@
           <div class="form-group"><label>Elevasi (mdpl)</label><input type="number" id="elev" value="0"></div>
         </div>
         <div class="form-group"><label>Keterangan</label><input type="text" id="ket" placeholder="Contoh: Tertutup bukit, blank spot"></div>
-        <div class="modal-buttons"><button type="button" class="btn-outline" id="closeModalBtn">Batal</button><button type="submit" class="btn-primary">Simpan</button></div>
+        <div class="modal-buttons">
+          <button type="button" class="btn-outline" id="cancelModalBtn">Batal</button>
+          <button type="submit" class="btn-primary">Simpan</button>
+        </div>
       </form>
     </div>
   </div>
