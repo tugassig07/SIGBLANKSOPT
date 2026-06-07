@@ -3,7 +3,7 @@
 // Disesuaikan dengan struktur sheet
 // ============================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycby6xlCs43k_pefCPbcNHFX4Zu2BOCvbrrgfNQm5dg5KfmDA7XmHj1mgjNVwSovoUakEGQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby-LWBOE7STiH2J-7_XOXOx7Cj8jxUXWtPQCFesmEO3LNN4gKtYyE-bGmSmPOh2swYR/exec';
 
 // Konfigurasi Login
 const ADMIN_CREDENTIALS = {
