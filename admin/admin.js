@@ -3,7 +3,7 @@
 // ============================================
 
 // Konfigurasi - GANTI DENGAN URL APPS SCRIPT ANDA
-let API_URL = 'https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec';
+let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
 
 // Konfigurasi Login
 const ADMIN_CREDENTIALS = {
