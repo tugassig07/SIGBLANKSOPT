@@ -1,8 +1,8 @@
 // ============================================
-// USER VIEW - GOOGLE SHEETS LIVE DATA
+// USER VIEW - GOOGLE SHEETS LIVE DATA (FIXED)
 // ============================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyrr4wwo7LVoh3_MssV3JmKdnkSF2g9vsidrRBvqwQBJpRbbHuFYmqAPg5pAWRDodrA/exec';
 
 let map, markerCluster, pointsData = [], filteredData = [];
 let currentLayer = 'satellite', layers = {};
@@ -11,6 +11,7 @@ let userMarker = null, userCircle = null;
 let activePanel = null, filterKec = 'all', filterStatus = 'all', searchTimeout = null;
 let lastSyncTime = null, isDarkMode = true;
 
+// Color mapping for status
 const colorMap = { blank: '#FF3B5C', lemah: '#FFD700', sedang: '#FF8C00', baik: '#39FF14' };
 const labelMap = { blank: 'Blank Spot', lemah: 'Sinyal Lemah', sedang: 'Sinyal Sedang', baik: 'Sinyal Baik' };
 
@@ -44,17 +45,26 @@ async function fetchDataFromSheets() {
   
   try {
     updateStatusBar('loading', 'Mengambil data...');
-    const response = await fetch(API_URL);
+    const response = await fetch(`${API_URL}?action=getData&t=${Date.now()}`, { method: 'GET' });
     const result = await response.json();
     clearInterval(interval);
     if (progressBar) progressBar.style.width = '100%';
     
     if (result.success && result.data && result.data.length > 0) {
       pointsData = result.data.map(item => ({
-        id: parseInt(item.id), kec: item.kec, desa: item.desa, dusun: item.dusun,
-        lat: parseFloat(item.lat), lng: parseFloat(item.lng), status: item.status,
-        rssi: item.rssi, provider: item.provider, populasi: parseInt(item.populasi),
-        luas: item.luas || '-', elev: parseInt(item.elev) || 0, ket: item.ket || ''
+        id: parseInt(item.id),
+        kec: item.kec || '',
+        desa: item.desa || '',
+        dusun: item.dusun || '',
+        lat: parseFloat(item.lat) || 0,
+        lng: parseFloat(item.lng) || 0,
+        status: item.status || 'blank',
+        rssi: item.rssi || -70,
+        provider: item.provider || '',
+        populasi: parseInt(item.populasi) || 0,
+        luas: item.luas || '-',
+        elev: parseInt(item.elev) || 0,
+        ket: item.ket || ''
       }));
       filteredData = [...pointsData];
       lastSyncTime = new Date();
@@ -77,6 +87,7 @@ async function fetchDataFromSheets() {
     if (badgeLastSync) badgeLastSync.textContent = lastSyncTime ? lastSyncTime.toLocaleTimeString() : '-';
     
   } catch (error) {
+    console.error('Fetch error:', error);
     const cached = localStorage.getItem('cachedData');
     if (cached && JSON.parse(cached).length > 0) {
       pointsData = JSON.parse(cached);
@@ -91,6 +102,7 @@ async function fetchDataFromSheets() {
       updateUI();
       renderMarkers([]);
       updateStatusBar('error', 'Gagal mengambil data');
+      showToast('Gagal mengambil data dari server', 'error');
     }
   } finally {
     setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 500);
@@ -99,26 +111,61 @@ async function fetchDataFromSheets() {
 
 async function refreshData() { await fetchDataFromSheets(); }
 
+// FIXED: Create marker icons with proper colors based on status
 function makeIcon(status, kec) {
   const c = colorMap[status] || '#888';
   const border = kec === 'Kedewan' ? '#00AAFF' : '#FF6B35';
   const size = status === 'blank' ? 36 : 32;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="${c}" fill-opacity="0.15" stroke="${border}" stroke-width="1.5"/><circle cx="${size/2}" cy="${size/2}" r="${size/2-6}" fill="${c}" stroke="#fff" stroke-width="2"/>${status === 'blank' ? `<circle cx="${size/2}" cy="${size/2}" r="3" fill="#fff" fill-opacity="0.8"/>` : `<circle cx="${size/2}" cy="${size/2}" r="${size/2-10}" fill="#fff" fill-opacity="0.5"/>`}</svg>`;
-  return L.divIcon({ className: 'custom-marker', html: svg, iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -size/2] });
+  
+  let innerCircle = '';
+  if (status === 'blank') {
+    innerCircle = `<circle cx="${size/2}" cy="${size/2}" r="4" fill="#fff" fill-opacity="0.9"/>`;
+  } else {
+    innerCircle = `<circle cx="${size/2}" cy="${size/2}" r="${size/2-12}" fill="#fff" fill-opacity="0.4"/>`;
+  }
+  
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+    <circle cx="${size/2}" cy="${size/2}" r="${size/2-2}" fill="${c}" fill-opacity="0.15" stroke="${border}" stroke-width="1.5"/>
+    <circle cx="${size/2}" cy="${size/2}" r="${size/2-6}" fill="${c}" stroke="#fff" stroke-width="2"/>
+    ${innerCircle}
+  </svg>`;
+  
+  return L.divIcon({ 
+    className: 'custom-marker', 
+    html: svg, 
+    iconSize: [size, size], 
+    iconAnchor: [size/2, size/2], 
+    popupAnchor: [0, -size/2] 
+  });
 }
 
 function popupContent(d) {
-  return `<div class="popup-title">${d.dusun}<span class="popup-status" style="background:${colorMap[d.status]}20;color:${colorMap[d.status]}">${labelMap[d.status]}</span></div><div class="popup-grid"><div class="popup-grid-item"><span class="popup-grid-label">Kecamatan</span><span>${d.kec}</span></div><div class="popup-grid-item"><span class="popup-grid-label">Desa</span><span>${d.desa}</span></div><div class="popup-grid-item"><span class="popup-grid-label">Populasi</span><span>${d.populasi} jiwa</span></div><div class="popup-grid-item"><span class="popup-grid-label">Elevasi</span><span>${d.elev} mdpl</span></div></div><div class="popup-footer"><button class="popup-detail-btn" onclick="showDetail(${d.id})">Lihat Detail →</button></div>`;
+  return `<div class="popup-title">${d.dusun}<span class="popup-status" style="background:${colorMap[d.status]}20;color:${colorMap[d.status]}">${labelMap[d.status]}</span></div>
+    <div class="popup-grid">
+      <div class="popup-grid-item"><span class="popup-grid-label">Kecamatan</span><span>${d.kec || '-'}</span></div>
+      <div class="popup-grid-item"><span class="popup-grid-label">Desa</span><span>${d.desa || '-'}</span></div>
+      <div class="popup-grid-item"><span class="popup-grid-label">Populasi</span><span>${d.populasi || 0} jiwa</span></div>
+      <div class="popup-grid-item"><span class="popup-grid-label">Provider</span><span>${d.provider || '-'}</span></div>
+      <div class="popup-grid-item"><span class="popup-grid-label">Elevasi</span><span>${d.elev || 0} mdpl</span></div>
+      <div class="popup-grid-item"><span class="popup-grid-label">RSSI</span><span>${d.rssi || -70} dBm</span></div>
+    </div>
+    <div class="popup-footer"><button class="popup-detail-btn" onclick="showDetail(${d.id})">Lihat Detail →</button></div>`;
 }
 
 function renderMarkers(data) {
   if (!markerCluster) return;
   markerCluster.clearLayers();
   if (!data || data.length === 0) return;
+  
   data.forEach(d => {
     const m = L.marker([d.lat, d.lng], { icon: makeIcon(d.status, d.kec) })
       .bindPopup(popupContent(d), { maxWidth: 280, className: 'glass-popup' })
-      .bindTooltip(`<strong>${d.dusun}</strong><br><span style="color:${colorMap[d.status]}">● ${labelMap[d.status]}</span>`, { direction: 'top', offset: [0, -20], className: 'custom-tooltip', sticky: true });
+      .bindTooltip(`<strong>${d.dusun}</strong><br><span style="color:${colorMap[d.status]}">● ${labelMap[d.status]}</span>`, { 
+        direction: 'top', 
+        offset: [0, -20], 
+        className: 'custom-tooltip', 
+        sticky: true 
+      });
     markerCluster.addLayer(m);
   });
 }
@@ -155,11 +202,19 @@ function updateDonut(data) {
   const sedang = data.filter(d => d.status === 'sedang').length;
   const baik = data.filter(d => d.status === 'baik').length;
   const circ = 251.2;
-  const blankLen = (blank / total) * circ, lemahLen = (lemah / total) * circ, sedangLen = (sedang / total) * circ, baikLen = (baik / total) * circ;
-  const db = document.getElementById('donutBlank'); if (db) { db.style.strokeDasharray = `${blankLen} ${circ}`; db.style.strokeDashoffset = 0; }
-  const dl = document.getElementById('donutLemah'); if (dl) { dl.style.strokeDasharray = `${lemahLen} ${circ}`; dl.style.strokeDashoffset = -blankLen; }
-  const ds = document.getElementById('donutSedang'); if (ds) { ds.style.strokeDasharray = `${sedangLen} ${circ}`; ds.style.strokeDashoffset = -(blankLen + lemahLen); }
-  const dba = document.getElementById('donutBaik'); if (dba) { dba.style.strokeDasharray = `${baikLen} ${circ}`; dba.style.strokeDashoffset = -(blankLen + lemahLen + sedangLen); }
+  const blankLen = (blank / total) * circ;
+  const lemahLen = (lemah / total) * circ;
+  const sedangLen = (sedang / total) * circ;
+  const baikLen = (baik / total) * circ;
+  
+  const db = document.getElementById('donutBlank'); 
+  if (db) { db.style.strokeDasharray = `${blankLen} ${circ}`; db.style.strokeDashoffset = 0; }
+  const dl = document.getElementById('donutLemah'); 
+  if (dl) { dl.style.strokeDasharray = `${lemahLen} ${circ}`; dl.style.strokeDashoffset = -blankLen; }
+  const ds = document.getElementById('donutSedang'); 
+  if (ds) { ds.style.strokeDasharray = `${sedangLen} ${circ}`; ds.style.strokeDashoffset = -(blankLen + lemahLen); }
+  const dba = document.getElementById('donutBaik'); 
+  if (dba) { dba.style.strokeDasharray = `${baikLen} ${circ}`; dba.style.strokeDashoffset = -(blankLen + lemahLen + sedangLen); }
 }
 
 function renderChart(data) {
@@ -189,21 +244,56 @@ function filterData() {
   filteredData = pointsData.filter(d => {
     const kecOk = filterKec === 'all' || d.kec === filterKec;
     const statusOk = filterStatus === 'all' || d.status === filterStatus;
-    const searchOk = !search || d.dusun.toLowerCase().includes(search) || d.desa.toLowerCase().includes(search);
+    const searchOk = !search || (d.dusun && d.dusun.toLowerCase().includes(search)) || (d.desa && d.desa.toLowerCase().includes(search));
     return kecOk && statusOk && searchOk;
   });
   renderMarkers(filteredData);
   updateStats(filteredData);
   updateDonut(filteredData);
   renderChart(filteredData);
-  const fs = document.getElementById('filterStats'); if (fs) fs.innerHTML = `Menampilkan ${filteredData.length} dari ${pointsData.length} titik`;
+  const fs = document.getElementById('filterStats'); 
+  if (fs) fs.innerHTML = `Menampilkan ${filteredData.length} dari ${pointsData.length} titik`;
 }
 
-function setFilterKec(kec, btn) { filterKec = kec; if (btn?.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); if (btn) btn.classList.add('active'); filterData(); showToast(`Filter: ${kec === 'all' ? 'Semua' : kec}`, 'info'); }
-function setFilterStatus(status, btn) { filterStatus = status; if (btn?.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); if (btn) btn.classList.add('active'); filterData(); showToast(`Filter: ${status === 'all' ? 'Semua' : labelMap[status]}`, 'info'); }
-function quickFilter(status) { const map = { blank: '.chip-danger', lemah: '.chip-warning', sedang: '.chip', baik: '.chip-success' }; const btn = document.querySelector(map[status]); if (btn) setFilterStatus(status, btn); }
-function resetFilters() { filterKec = 'all'; filterStatus = 'all'; const search = document.getElementById('searchInput'); if (search) search.value = ''; document.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); const firstChips = document.querySelectorAll('.chip'); if (firstChips[0]) firstChips[0].classList.add('active'); if (firstChips[4]) firstChips[4].classList.add('active'); filterData(); showToast('Filter direset', 'success'); }
-function debouncedFilter() { if (searchTimeout) clearTimeout(searchTimeout); searchTimeout = setTimeout(() => filterData(), 300); }
+function setFilterKec(kec, btn) { 
+  filterKec = kec; 
+  if (btn && btn.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); 
+  if (btn) btn.classList.add('active'); 
+  filterData(); 
+  showToast(`Filter: ${kec === 'all' ? 'Semua' : kec}`, 'info'); 
+}
+
+function setFilterStatus(status, btn) { 
+  filterStatus = status; 
+  if (btn && btn.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); 
+  if (btn) btn.classList.add('active'); 
+  filterData(); 
+  showToast(`Filter: ${status === 'all' ? 'Semua' : labelMap[status]}`, 'info'); 
+}
+
+function quickFilter(status) { 
+  const statusMap = { blank: '.chip-danger', lemah: '.chip-warning', sedang: '.chip', baik: '.chip-success' };
+  const btn = document.querySelector(statusMap[status]); 
+  if (btn) setFilterStatus(status, btn); 
+}
+
+function resetFilters() { 
+  filterKec = 'all'; 
+  filterStatus = 'all'; 
+  const search = document.getElementById('searchInput'); 
+  if (search) search.value = ''; 
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); 
+  const firstChips = document.querySelectorAll('.chip'); 
+  if (firstChips[0]) firstChips[0].classList.add('active'); 
+  if (firstChips[4]) firstChips[4].classList.add('active'); 
+  filterData(); 
+  showToast('Filter direset', 'success'); 
+}
+
+function debouncedFilter() { 
+  if (searchTimeout) clearTimeout(searchTimeout); 
+  searchTimeout = setTimeout(() => filterData(), 300); 
+}
 
 function toggleHeatmap(btn) {
   if (pointsData.length === 0) { showToast('Tidak ada data untuk heatmap', 'warning'); return; }
@@ -212,10 +302,14 @@ function toggleHeatmap(btn) {
   if (heatActive && map) {
     const heatPoints = filteredData.filter(d => d.status === 'blank' || d.status === 'lemah').map(d => [d.lat, d.lng, d.status === 'blank' ? 1 : 0.5]);
     if (heatPoints.length > 0) {
-      heatLayer = L.heatLayer(heatPoints, { radius: 35, blur: 20, maxZoom: 15, minOpacity: 0.3, gradient: { 0.4: '#FFD700', 0.6: '#FF8C00', 0.8: '#FF3B5C' } }).addTo(map);
+      // Check if heat layer already exists
+      if (window.heatLayer && map.hasLayer(window.heatLayer)) {
+        map.removeLayer(window.heatLayer);
+      }
+      window.heatLayer = L.heatLayer(heatPoints, { radius: 35, blur: 20, maxZoom: 15, minOpacity: 0.3, gradient: { 0.4: '#FFD700', 0.6: '#FF8C00', 0.8: '#FF3B5C' } }).addTo(map);
       showToast('Heatmap aktif', 'info');
     } else { showToast('Tidak ada titik blank/lemah', 'warning'); heatActive = false; if (btn) btn.classList.remove('active'); }
-  } else if (heatLayer && map) { map.removeLayer(heatLayer); showToast('Heatmap nonaktif', 'info'); }
+  } else if (window.heatLayer && map) { map.removeLayer(window.heatLayer); showToast('Heatmap nonaktif', 'info'); }
 }
 
 function setLayer(name, btn) {
@@ -229,6 +323,7 @@ function setLayer(name, btn) {
 }
 
 function resetView() { if (map) { map.setView([-7.090, 111.650], 12); showToast('Tampilan direset', 'info'); } }
+
 function locateUser() { 
   if (!navigator.geolocation) { showToast('Geolokasi tidak didukung', 'error'); return; } 
   showToast('Mendapatkan lokasi...', 'info'); 
@@ -242,6 +337,7 @@ function locateUser() {
     showToast('Lokasi ditemukan', 'success'); 
   }, () => showToast('Gagal mendapatkan lokasi', 'error')); 
 }
+
 function toggleDarkMode() { 
   isDarkMode = !isDarkMode; 
   const root = document.documentElement; 
@@ -255,6 +351,7 @@ function toggleDarkMode() {
   showToast(isDarkMode ? 'Mode gelap' : 'Mode terang', 'info'); 
   localStorage.setItem('darkMode', isDarkMode); 
 }
+
 function showDetail(id) { 
   const point = pointsData.find(d => d.id === id); 
   if (!point) return; 
@@ -262,21 +359,33 @@ function showDetail(id) {
     const sheet = document.getElementById('bottomSheet'); 
     const body = document.getElementById('bottomSheetBody'); 
     if (sheet && body) { 
-      body.innerHTML = `<div class="bs-header"><strong>${point.dusun}</strong><span class="bs-status" style="color:${colorMap[point.status]}">● ${labelMap[point.status]}</span></div><div class="bs-row"><span>Kecamatan</span><span>${point.kec}</span></div><div class="bs-row"><span>Desa</span><span>${point.desa}</span></div><div class="bs-row"><span>Populasi</span><span>${point.populasi} jiwa</span></div><div class="bs-row"><span>Elevasi</span><span>${point.elev} mdpl</span></div><div class="bs-row"><span>Provider</span><span>${point.provider}</span></div><div class="bs-note">${point.ket}</div><button class="bs-close" onclick="closeBottomSheet()">Tutup</button>`; 
+      body.innerHTML = `<div class="bs-header"><strong>${point.dusun}</strong><span class="bs-status" style="color:${colorMap[point.status]}">● ${labelMap[point.status]}</span></div>
+        <div class="bs-row"><span>Kecamatan</span><span>${point.kec || '-'}</span></div>
+        <div class="bs-row"><span>Desa</span><span>${point.desa || '-'}</span></div>
+        <div class="bs-row"><span>Populasi</span><span>${point.populasi || 0} jiwa</span></div>
+        <div class="bs-row"><span>Provider</span><span>${point.provider || '-'}</span></div>
+        <div class="bs-row"><span>Elevasi</span><span>${point.elev || 0} mdpl</span></div>
+        <div class="bs-row"><span>RSSI</span><span>${point.rssi || -70} dBm</span></div>
+        <div class="bs-note">${point.ket || 'Tidak ada keterangan'}</div>
+        <button class="bs-close" onclick="closeBottomSheet()">Tutup</button>`; 
       sheet.classList.add('open'); 
     } 
   } else { 
-    alert(`Dusun: ${point.dusun}\nDesa: ${point.desa}\nKecamatan: ${point.kec}\nStatus: ${labelMap[point.status]}\nProvider: ${point.provider}\nPopulasi: ${point.populasi} jiwa\nElevasi: ${point.elev} mdpl\nKeterangan: ${point.ket}`); 
+    alert(`Dusun: ${point.dusun}\nDesa: ${point.desa}\nKecamatan: ${point.kec}\nStatus: ${labelMap[point.status]}\nProvider: ${point.provider}\nPopulasi: ${point.populasi} jiwa\nElevasi: ${point.elev} mdpl\nRSSI: ${point.rssi} dBm\nKeterangan: ${point.ket}`); 
   } 
 }
+
 function closeBottomSheet() { const sheet = document.getElementById('bottomSheet'); if (sheet) sheet.classList.remove('open'); }
+
 function togglePanel(name) { 
   const panel = document.getElementById('panel-' + name); 
   if (activePanel === name && panel) { panel.style.display = 'none'; activePanel = null; } 
   else { document.querySelectorAll('.glass-panel').forEach(p => { if (p) p.style.display = 'none'; }); if (panel) panel.style.display = 'flex'; activePanel = name; } 
 }
+
 function toggleSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebarOverlay'); if (sidebar && overlay) { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); } }
 function closeSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebarOverlay'); if (sidebar && overlay) { sidebar.classList.remove('open'); overlay.classList.remove('open'); } }
+
 function exportToCSV() { 
   if (filteredData.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
   const headers = ['ID','Kecamatan','Desa','Dusun','Latitude','Longitude','Status','RSSI','Provider','Populasi','Luas','Elevasi','Keterangan']; 
@@ -289,19 +398,97 @@ function exportToCSV() {
   showToast(`${filteredData.length} data diexport`, 'success'); 
 }
 
+// Initialize map and load data
 document.addEventListener('DOMContentLoaded', () => {
-  layers = { satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri', maxZoom: 19 }), osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }) };
+  // Setup map layers
+  layers = { 
+    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
+      attribution: 'Esri', 
+      maxZoom: 19 
+    }), 
+    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
+      attribution: '© OpenStreetMap', 
+      maxZoom: 19 
+    }) 
+  };
+  
   map = L.map('map', { zoomControl: false }).setView([-7.090, 111.650], 12);
   layers.satellite.addTo(map);
-  markerCluster = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, iconCreateFunction: cluster => { const count = cluster.getChildCount(); let color = '#00D4FF'; if (count > 10) color = '#FF3B5C'; else if (count > 5) color = '#FFD700'; return L.divIcon({ html: `<div class="cluster-icon" style="background:${color};"><span>${count}</span><div class="cluster-pulse" style="background:${color}"></div></div>`, className: 'marker-cluster-custom', iconSize: [42,42], iconAnchor: [21,21] }); } });
+  
+  markerCluster = L.markerClusterGroup({ 
+    maxClusterRadius: 50, 
+    spiderfyOnMaxZoom: true, 
+    showCoverageOnHover: false, 
+    iconCreateFunction: cluster => { 
+      const count = cluster.getChildCount(); 
+      let color = '#00D4FF'; 
+      if (count > 10) color = '#FF3B5C'; 
+      else if (count > 5) color = '#FFD700'; 
+      return L.divIcon({ 
+        html: `<div class="cluster-icon" style="background:${color};"><span>${count}</span><div class="cluster-pulse" style="background:${color}"></div></div>`, 
+        className: 'marker-cluster-custom', 
+        iconSize: [42,42], 
+        iconAnchor: [21,21] 
+      }); 
+    } 
+  });
   map.addLayer(markerCluster);
-  L.polygon([[-7.095,111.620],[-7.100,111.645],[-7.108,111.660],[-7.115,111.655],[-7.128,111.648],[-7.135,111.630],[-7.130,111.615],[-7.120,111.608],[-7.108,111.610],[-7.095,111.620]], { color:'#00AAFF', fillColor:'#00AAFF', fillOpacity:0.06, weight:2, dashArray:'8,4' }).addTo(map);
-  L.polygon([[-7.072,111.640],[-7.073,111.670],[-7.085,111.695],[-7.098,111.690],[-7.107,111.680],[-7.108,111.660],[-7.100,111.645],[-7.095,111.620],[-7.080,111.625],[-7.072,111.640]], { color:'#FF6B35', fillColor:'#FF6B35', fillOpacity:0.06, weight:2, dashArray:'8,4' }).addTo(map);
+  
+  // Add boundary polygons
+  L.polygon([[-7.095,111.620],[-7.100,111.645],[-7.108,111.660],[-7.115,111.655],[-7.128,111.648],[-7.135,111.630],[-7.130,111.615],[-7.120,111.608],[-7.108,111.610],[-7.095,111.620]], { 
+    color:'#00AAFF', fillColor:'#00AAFF', fillOpacity:0.06, weight:2, dashArray:'8,4' 
+  }).addTo(map);
+  
+  L.polygon([[-7.072,111.640],[-7.073,111.670],[-7.085,111.695],[-7.098,111.690],[-7.107,111.680],[-7.108,111.660],[-7.100,111.645],[-7.095,111.620],[-7.080,111.625],[-7.072,111.640]], { 
+    color:'#FF6B35', fillColor:'#FF6B35', fillOpacity:0.06, weight:2, dashArray:'8,4' 
+  }).addTo(map);
+  
+  // Set active layer button
   document.getElementById('layerSat')?.classList.add('active');
-  const savedDark = localStorage.getItem('darkMode'); if (savedDark === 'false') toggleDarkMode();
+  
+  // Load dark mode preference
+  const savedDark = localStorage.getItem('darkMode'); 
+  if (savedDark === 'false') toggleDarkMode();
+  
+  // Fetch data
   fetchDataFromSheets();
+  
+  // Auto refresh every 5 minutes
   setInterval(() => fetchDataFromSheets(), 5 * 60 * 1000);
+  
+  // Fix map size
   setTimeout(() => map?.invalidateSize(), 100);
-  map.on('click', () => { if (activePanel) togglePanel(activePanel); closeBottomSheet(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (activePanel) togglePanel(activePanel); closeBottomSheet(); closeSidebar(); } });
+  
+  // Close panels when clicking on map
+  map.on('click', () => { 
+    if (activePanel) togglePanel(activePanel); 
+    closeBottomSheet(); 
+  });
+  
+  // Escape key handler
+  document.addEventListener('keydown', (e) => { 
+    if (e.key === 'Escape') { 
+      if (activePanel) togglePanel(activePanel); 
+      closeBottomSheet(); 
+      closeSidebar(); 
+    } 
+  });
 });
+
+// Export functions for global access
+window.refreshData = refreshData;
+window.toggleSidebar = toggleSidebar;
+window.closeSidebar = closeSidebar;
+window.togglePanel = togglePanel;
+window.setFilterKec = setFilterKec;
+window.setFilterStatus = setFilterStatus;
+window.resetFilters = resetFilters;
+window.quickFilter = quickFilter;
+window.toggleHeatmap = toggleHeatmap;
+window.setLayer = setLayer;
+window.resetView = resetView;
+window.locateUser = locateUser;
+window.toggleDarkMode = toggleDarkMode;
+window.exportToCSV = exportToCSV;
+window.showDetail = showDetail;
+window.closeBottomSheet = closeBottomSheet;
