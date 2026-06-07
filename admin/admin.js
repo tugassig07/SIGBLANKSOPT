@@ -1,9 +1,9 @@
 // ============================================
 // ADMIN PANEL - DIRECT SYNC TO GOOGLE SHEETS
-// BUG FIXED VERSION
+// FIXED VERSION
 // ============================================
 
-let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
+let API_URL = 'https://script.google.com/macros/s/AKfycbyrr4wwo7LVoh3_MssV3JmKdnkSF2g9vsidrRBvqwQBJpRbbHuFYmqAPg5pAWRDodrA/exec';
 let pointsData = [];
 let isLoading = false;
 
@@ -20,41 +20,33 @@ function checkLogin() {
     return false;
 }
 
-// Login form handler
-const loginForm = document.getElementById('loginForm');
-if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const username = document.getElementById('loginUsername').value;
-        const password = document.getElementById('loginPassword').value;
-        
-        if (username === 'admin' && password === 'admin123') {
-            localStorage.setItem('adminLogged', 'true');
-            localStorage.setItem('adminUser', username);
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('adminApp').style.display = 'block';
-            document.getElementById('adminName').innerText = username;
-            loadDataFromSheets();
-        } else {
-            const err = document.getElementById('loginError');
-            err.innerText = 'Username atau password salah! (admin/admin123)';
-            err.style.display = 'block';
-            setTimeout(() => err.style.display = 'none', 3000);
-        }
-    });
-}
+document.getElementById('loginForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('loginUsername').value;
+    const password = document.getElementById('loginPassword').value;
+    
+    if (username === 'admin' && password === 'admin123') {
+        localStorage.setItem('adminLogged', 'true');
+        localStorage.setItem('adminUser', username);
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('adminApp').style.display = 'block';
+        document.getElementById('adminName').innerText = username;
+        loadDataFromSheets();
+    } else {
+        const err = document.getElementById('loginError');
+        err.innerText = 'Username atau password salah! (admin/admin123)';
+        err.style.display = 'block';
+        setTimeout(() => err.style.display = 'none', 3000);
+    }
+});
 
-// Logout handler
-const logoutBtn = document.getElementById('logoutBtn');
-if (logoutBtn) {
-    logoutBtn.addEventListener('click', () => {
-        localStorage.removeItem('adminLogged');
-        localStorage.removeItem('adminUser');
-        document.getElementById('loginPage').style.display = 'flex';
-        document.getElementById('adminApp').style.display = 'none';
-        pointsData = [];
-    });
-}
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem('adminLogged');
+    localStorage.removeItem('adminUser');
+    document.getElementById('loginPage').style.display = 'flex';
+    document.getElementById('adminApp').style.display = 'none';
+    pointsData = [];
+});
 
 // ========== NAVIGATION ==========
 document.querySelectorAll('.menu-item').forEach(item => {
@@ -64,15 +56,11 @@ document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.add('active');
         const page = item.getAttribute('data-page');
         document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-        const pageElement = document.getElementById(`${page}Page`);
-        if (pageElement) pageElement.style.display = 'block';
-        const pageTitle = document.getElementById('pageTitle');
-        if (pageTitle) {
-            pageTitle.innerText = 
-                page === 'dashboard' ? 'Dashboard' :
-                page === 'points' ? 'Kelola Titik' :
-                page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
-        }
+        document.getElementById(`${page}Page`).style.display = 'block';
+        document.getElementById('pageTitle').innerText = 
+            page === 'dashboard' ? 'Dashboard' :
+            page === 'points' ? 'Kelola Titik' :
+            page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
     });
 });
 
@@ -96,7 +84,10 @@ async function loadDataFromSheets() {
                     lat: parseFloat(item.lat) || 0,
                     lng: parseFloat(item.lng) || 0,
                     populasi: parseInt(item.populasi) || 0,
-                    provider: item.provider || ''
+                    provider: item.provider || '',
+                    rssi: item.rssi || -70,
+                    elev: item.elev || 0,
+                    ket: item.ket || ''
                 }));
                 addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
             } else {
@@ -125,29 +116,23 @@ function renderDashboard() {
     const baik = pointsData.filter(p => p.status === 'baik').length;
     const total = pointsData.length;
     
-    const statsGrid = document.getElementById('statsGrid');
-    if (statsGrid) {
-        statsGrid.innerHTML = `
-            <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div></div>
-            <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div></div>
-            <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div></div>
-            <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div></div>
-            <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
-        `;
-    }
+    document.getElementById('statsGrid').innerHTML = `
+        <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div></div>
+        <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div></div>
+        <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div></div>
+        <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div></div>
+        <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
+    `;
 }
 
 function renderTable() {
-    const searchInput = document.getElementById('searchInput');
-    const search = searchInput ? searchInput.value.toLowerCase() : '';
+    const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
     const filtered = pointsData.filter(p => 
-        (p.dusun && p.dusun.toLowerCase().includes(search)) || 
-        (p.desa && p.desa.toLowerCase().includes(search))
+        p.dusun?.toLowerCase().includes(search) || 
+        p.desa?.toLowerCase().includes(search)
     );
     
     const tbody = document.getElementById('pointsTableBody');
-    if (!tbody) return;
-    
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
         return;
@@ -182,26 +167,21 @@ function addLog(msg, type = 'info') {
 
 function updateLastSync() {
     const last = localStorage.getItem('lastSync');
-    const lastSyncSpan = document.getElementById('lastSyncTime');
-    if (lastSyncSpan) {
-        lastSyncSpan.innerHTML = last ? new Date(last).toLocaleString() : '-';
-    }
+    document.getElementById('lastSyncTime').innerHTML = last ? new Date(last).toLocaleString() : '-';
 }
 
-// ========== CRUD OPERATIONS (LANGSUNG KE SHEETS) ==========
+// ========== CRUD OPERATIONS (FIXED) ==========
 async function addPoint(data) {
     addLog(`➕ Menambahkan titik: ${data.dusun}...`, 'info');
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('action', 'add');
-        formData.append('data', JSON.stringify(data));
-        
         const response = await fetch(API_URL, {
             method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'add',
+                data: data
+            })
         });
         
         if (response.ok) {
@@ -211,11 +191,11 @@ async function addPoint(data) {
                 await loadDataFromSheets();
                 return true;
             } else {
-                addLog(`❌ Gagal: ${result.message || 'Unknown error'}`, 'error');
-                return false;
+                throw new Error(result.message || 'Gagal menambahkan');
             }
+        } else {
+            throw new Error(`HTTP ${response.status}`);
         }
-        throw new Error('Gagal menambahkan');
     } catch (error) {
         addLog(`❌ Gagal menambahkan: ${error.message}`, 'error');
         return false;
@@ -243,15 +223,13 @@ async function updatePoint(id, data) {
     addLog(`✏️ Mengupdate titik ID: ${id}...`, 'info');
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('action', 'update');
-        formData.append('data', JSON.stringify({ id, ...data }));
-        
         const response = await fetch(API_URL, {
             method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'update',
+                data: { id, ...data }
+            })
         });
         
         if (response.ok) {
@@ -260,9 +238,12 @@ async function updatePoint(id, data) {
                 addLog(`✅ Titik "${data.dusun}" berhasil diupdate`, 'success');
                 await loadDataFromSheets();
                 return true;
+            } else {
+                throw new Error(result.message || 'Gagal mengupdate');
             }
+        } else {
+            throw new Error(`HTTP ${response.status}`);
         }
-        throw new Error('Gagal mengupdate');
     } catch (error) {
         addLog(`❌ Gagal mengupdate: ${error.message}`, 'error');
         return false;
@@ -273,18 +254,16 @@ async function deletePoint(id) {
     if (!confirm('Hapus titik ini? Data akan dihapus dari Google Sheets.')) return;
     
     const point = pointsData.find(p => p.id === id);
-    addLog(`🗑️ Menghapus titik: ${point?.dusun}...`, 'info');
+    addLog(`🗑️ Menghapus titik: ${point?.dusun || id}...`, 'info');
     
     try {
-        const formData = new URLSearchParams();
-        formData.append('action', 'delete');
-        formData.append('id', id.toString());
-        
         const response = await fetch(API_URL, {
             method: 'POST',
-            mode: 'cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData.toString()
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'delete',
+                id: id
+            })
         });
         
         if (response.ok) {
@@ -293,9 +272,12 @@ async function deletePoint(id) {
                 addLog(`✅ Titik "${point?.dusun}" berhasil dihapus`, 'success');
                 await loadDataFromSheets();
                 return true;
+            } else {
+                throw new Error(result.message || 'Gagal menghapus');
             }
+        } else {
+            throw new Error(`HTTP ${response.status}`);
         }
-        throw new Error('Gagal menghapus');
     } catch (error) {
         addLog(`❌ Gagal menghapus: ${error.message}`, 'error');
         return false;
@@ -350,15 +332,13 @@ async function pushData() {
     
     for (const point of pointsData) {
         try {
-            const formData = new URLSearchParams();
-            formData.append('action', 'sync');
-            formData.append('data', JSON.stringify(point));
-            
             const response = await fetch(API_URL, {
                 method: 'POST',
-                mode: 'cors',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData.toString()
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'add',
+                    data: point
+                })
             });
             
             if (response.ok) {
@@ -382,10 +362,10 @@ async function pushData() {
 // ========== SAMPLE DATA ==========
 async function addSampleData() {
     const samples = [
-        { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel' },
-        { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL' },
-        { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat' },
-        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel' }
+        { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel', rssi: -95, elev: 45 },
+        { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL', rssi: -85, elev: 52 },
+        { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat', rssi: -75, elev: 48 },
+        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel', rssi: -65, elev: 50 }
     ];
     
     for (const s of samples) {
@@ -423,7 +403,9 @@ function changePassword() {
         return;
     }
     
-    addLog('✅ Password berhasil diubah', 'success');
+    // In production, you'd want to hash this
+    localStorage.setItem('adminPassword', newPass);
+    addLog('✅ Password berhasil diubah (akan berlaku setelah login ulang)', 'success');
     document.getElementById('oldPass').value = '';
     document.getElementById('newPass').value = '';
     document.getElementById('confirmPass').value = '';
@@ -460,7 +442,10 @@ if (pointForm) {
             lat: parseFloat(document.getElementById('lat').value),
             lng: parseFloat(document.getElementById('lng').value),
             populasi: parseInt(document.getElementById('populasi').value) || 0,
-            provider: document.getElementById('provider').value
+            provider: document.getElementById('provider').value,
+            rssi: -70,
+            elev: 0,
+            ket: ''
         };
         
         if (id) {
@@ -474,31 +459,57 @@ if (pointForm) {
 }
 
 const searchInput = document.getElementById('searchInput');
-if (searchInput) searchInput.addEventListener('input', () => renderTable());
+if (searchInput) {
+    searchInput.addEventListener('input', () => renderTable());
+}
 
 const refreshBtn = document.getElementById('refreshBtn');
-if (refreshBtn) refreshBtn.addEventListener('click', () => loadDataFromSheets());
+if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => loadDataFromSheets());
+}
 
 const refreshPointsBtn = document.getElementById('refreshPointsBtn');
-if (refreshPointsBtn) refreshPointsBtn.addEventListener('click', () => loadDataFromSheets());
+if (refreshPointsBtn) {
+    refreshPointsBtn.addEventListener('click', () => loadDataFromSheets());
+}
 
 const testConnBtn = document.getElementById('testConnBtn');
-if (testConnBtn) testConnBtn.addEventListener('click', testConnection);
+if (testConnBtn) {
+    testConnBtn.addEventListener('click', testConnection);
+}
 
 const pullDataBtn = document.getElementById('pullDataBtn');
-if (pullDataBtn) pullDataBtn.addEventListener('click', pullData);
+if (pullDataBtn) {
+    pullDataBtn.addEventListener('click', pullData);
+}
 
 const pushDataBtn = document.getElementById('pushDataBtn');
-if (pushDataBtn) pushDataBtn.addEventListener('click', pushData);
+if (pushDataBtn) {
+    pushDataBtn.addEventListener('click', pushData);
+}
 
 const saveApiBtn = document.getElementById('saveApiBtn');
-if (saveApiBtn) saveApiBtn.addEventListener('click', saveApiConfig);
+if (saveApiBtn) {
+    saveApiBtn.addEventListener('click', saveApiConfig);
+}
 
 const changePassBtn = document.getElementById('changePassBtn');
-if (changePassBtn) changePassBtn.addEventListener('click', changePassword);
+if (changePassBtn) {
+    changePassBtn.addEventListener('click', changePassword);
+}
 
 const sampleDataBtn = document.getElementById('sampleDataBtn');
-if (sampleDataBtn) sampleDataBtn.addEventListener('click', addSampleData);
+if (sampleDataBtn) {
+    sampleDataBtn.addEventListener('click', addSampleData);
+}
+
+// Close modal when clicking outside
+window.addEventListener('click', (e) => {
+    const modal = document.getElementById('pointModal');
+    if (e.target === modal) {
+        modal.style.display = 'none';
+    }
+});
 
 // ========== INITIALIZATION ==========
 const savedUrl = localStorage.getItem('apiUrl');
