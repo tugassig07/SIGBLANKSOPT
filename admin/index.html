@@ -1,199 +1,178 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>Admin Panel SIG Blank Spot - Bojonegoro</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin SIG Blank Spot - Bojonegoro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-<!-- LOGIN MODAL -->
-<div id="loginModal" class="modal" style="display: flex;">
-  <div class="modal-content login-modal">
-    <div class="login-header">
-      <div class="login-logo">
-        <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
-        <div class="logo-text">
-          <h2>Admin SIG Blank Spot</h2>
-          <p>Bojonegoro 2026</p>
+<!-- HALAMAN LOGIN -->
+<div id="loginPage" class="login-page">
+    <div class="login-container">
+        <div class="login-logo">
+            <i class="fas fa-chart-line"></i>
         </div>
-      </div>
+        <h2>Admin SIG Blank Spot</h2>
+        <p>Bojonegoro 2026</p>
+        <form id="loginForm">
+            <input type="text" id="loginUsername" placeholder="Username" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <div id="loginError" class="error-msg"></div>
+            <button type="submit">Login</button>
+        </form>
     </div>
-    <form id="loginForm">
-      <div class="form-group">
-        <label><i class="fas fa-user"></i> Username</label>
-        <input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label><i class="fas fa-lock"></i> Password</label>
-        <input type="password" id="loginPassword" placeholder="Masukkan password" required>
-      </div>
-      <div class="login-error" id="loginError"></div>
-      <button type="submit" class="btn-primary login-btn">
-        <i class="fas fa-sign-in-alt"></i> Login
-      </button>
-    </form>
-    <div class="login-footer">
-      <small>© BPS Bojonegoro 2026</small>
-    </div>
-  </div>
 </div>
 
-<!-- MAIN ADMIN CONTENT -->
-<div id="adminContent" style="display: none;">
-  <div class="admin-wrapper">
-    <div class="sidebar-admin" id="sidebarAdmin">
-      <div class="logo-area">
-        <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
-        <div class="logo-text">
-          <h2>Admin SIG Blank Spot</h2>
-          <p>Google Sheets Sync</p>
+<!-- HALAMAN ADMIN -->
+<div id="adminApp" style="display:none">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="fas fa-chart-line"></i>
+            <span>Admin SIG</span>
         </div>
-      </div>
-      <div class="nav-item active" data-tab="dashboard"><i class="fas fa-tachometer-alt"></i> Dashboard</div>
-      <div class="nav-item" data-tab="points"><i class="fas fa-map-marker-alt"></i> Kelola Titik</div>
-      <div class="nav-item" data-tab="sync"><i class="fas fa-cloud-upload-alt"></i> Sinkronisasi</div>
-      <div class="nav-item" data-tab="settings"><i class="fas fa-cog"></i> Pengaturan</div>
-      <div class="nav-item logout-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</div>
+        <div class="menu-item active" data-page="dashboard">
+            <i class="fas fa-tachometer-alt"></i> Dashboard
+        </div>
+        <div class="menu-item" data-page="points">
+            <i class="fas fa-map-marker-alt"></i> Kelola Titik
+        </div>
+        <div class="menu-item" data-page="sync">
+            <i class="fas fa-cloud-upload-alt"></i> Sinkronisasi
+        </div>
+        <div class="menu-item" data-page="settings">
+            <i class="fas fa-cog"></i> Pengaturan
+        </div>
+        <div class="menu-item logout" id="logoutBtn">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </div>
     </div>
 
+    <!-- MAIN CONTENT -->
     <div class="main-content">
-      <div class="top-bar-admin">
-        <div class="page-title" id="mainTitle">Dashboard SIG 2026</div>
-        <div class="admin-badge">
-          <i class="fas fa-user-shield"></i> 
-          <span id="adminName">Admin</span>
-          <span style="margin: 0 8px">|</span>
-          <i class="fas fa-cloud"></i> 
-          <span id="syncStatus">Local Storage</span>
-        </div>
-      </div>
-
-      <div id="dashboardView">
-        <div class="stats-grid" id="statGrid"></div>
-        <div class="data-section">
-          <div class="section-header">
-            <h3><i class="fas fa-chart-simple"></i> Ringkasan Cepat</h3>
-            <button class="btn-outline" id="refreshDashboardBtn"><i class="fas fa-rotate-right"></i> Refresh Data</button>
-          </div>
-        </div>
-      </div>
-
-      <div id="pointsView" style="display: none;">
-        <div class="data-section">
-          <div class="section-header">
-            <h3><i class="fas fa-database"></i> Daftar Titik Survei</h3>
-            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-              <div class="search-bar"><i class="fas fa-search"></i><input type="text" id="searchPoint" placeholder="Cari dusun, desa..."></div>
-              <button class="btn-primary" id="addPointBtn"><i class="fas fa-plus"></i> Tambah Titik</button>
-              <button class="btn-outline" id="syncNowBtn"><i class="fas fa-cloud-upload-alt"></i> Sync ke Google Sheets</button>
+        <div class="top-bar">
+            <h2 id="pageTitle">Dashboard</h2>
+            <div class="user-info">
+                <i class="fas fa-user-shield"></i> <span id="adminName">Admin</span>
             </div>
-          </div>
-          <div style="overflow-x: auto;">
-            <table id="pointsTable">
-              <thead>
-                <tr><th>ID</th><th>Dusun</th><th>Desa</th><th>Kecamatan</th><th>Status</th><th>Populasi</th><th>Provider</th><th>Aksi</th></tr>
-              </thead>
-              <tbody id="tableBody"></tbody>
-            </table>
-          </div>
         </div>
-      </div>
 
-      <div id="syncView" style="display: none;">
-        <div class="data-section">
-          <h3><i class="fas fa-cloud-upload-alt"></i> Sinkronisasi Data</h3>
-          <div class="sync-info">
-            <div class="sync-card">
-              <div class="sync-icon"><i class="fab fa-google"></i></div>
-              <div class="sync-details">
-                <h4>Google Sheets API</h4>
-                <p>Status: <span id="apiStatus" class="status-badge">Belum Terhubung</span></p>
-                <p>Last Sync: <span id="lastSync">-</span></p>
-              </div>
+        <!-- DASHBOARD PAGE -->
+        <div id="dashboardPage" class="page">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card"><h4>Total Titik</h4><div class="number">0</div></div>
+                <div class="stat-card"><h4>Blank Spot</h4><div class="number">0</div></div>
+                <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number">0</div></div>
+                <div class="stat-card"><h4>Cakupan Baik</h4><div class="number">0</div></div>
             </div>
-            <div class="sync-actions">
-              <button class="btn-primary" id="pushToSheetBtn"><i class="fas fa-upload"></i> Push ke Google Sheets</button>
-              <button class="btn-outline" id="pullFromSheetBtn"><i class="fas fa-download"></i> Pull dari Google Sheets</button>
-              <button class="btn-outline" id="testConnectionBtn"><i class="fas fa-plug"></i> Test Connection</button>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Ringkasan Data</h3>
+                    <button class="btn-outline" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
             </div>
-          </div>
-          <div class="sync-log">
-            <h4><i class="fas fa-history"></i> Log Aktivitas</h4>
-            <div class="log-container" id="logContainer">
-              <div class="log-entry">📋 Sistem siap digunakan</div>
-            </div>
-          </div>
         </div>
-      </div>
 
-      <div id="settingsView" style="display: none;">
-        <div class="data-section">
-          <h3><i class="fas fa-key"></i> Konfigurasi API</h3>
-          <div class="form-group">
-            <label>Google Apps Script URL</label>
-            <input type="text" id="apiUrl" style="width: 100%;" value="https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec">
-            <small>URL Web App dari Google Apps Script</small>
-          </div>
-          <button class="btn-primary" id="saveApiConfig"><i class="fas fa-save"></i> Simpan Konfigurasi</button>
-          <hr>
-          <h3><i class="fas fa-user-lock"></i> Ubah Password</h3>
-          <div class="form-group">
-            <label>Password Lama</label>
-            <input type="password" id="oldPassword" placeholder="Masukkan password lama">
-          </div>
-          <div class="form-group">
-            <label>Password Baru</label>
-            <input type="password" id="newPassword" placeholder="Masukkan password baru">
-          </div>
-          <div class="form-group">
-            <label>Konfirmasi Password Baru</label>
-            <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
-          </div>
-          <button class="btn-primary" id="changePasswordBtn"><i class="fas fa-key"></i> Ubah Password</button>
-          <hr>
-          <button class="btn-outline" id="resetDataBtn"><i class="fas fa-trash-alt"></i> Reset Data Kosong</button>
-          <button class="btn-primary" id="addSampleDataBtn" style="margin-left: 10px;"><i class="fas fa-database"></i> Tambah Sample Data</button>
-          <button class="btn-primary" id="fullSyncBtn" style="margin-left: 10px; background: linear-gradient(95deg, #10B981, #059669);"><i class="fas fa-sync-alt"></i> Sinkronisasi Penuh</button>
+        <!-- POINTS PAGE -->
+        <div id="pointsPage" class="page" style="display:none">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Daftar Titik Survei</h3>
+                    <div class="actions">
+                        <input type="text" id="searchInput" placeholder="Cari dusun/desa..." class="search-box">
+                        <button class="btn-primary" id="addPointBtn"><i class="fas fa-plus"></i> Tambah</button>
+                        <button class="btn-outline" id="refreshPointsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    </div>
+                </div>
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>ID</th><th>Dusun</th><th>Desa</th><th>Kecamatan</th><th>Status</th><th>Populasi</th><th>Provider</th><th>Aksi</th></tr>
+                        </thead>
+                        <tbody id="pointsTableBody">
+                            <tr><td colspan="8" style="text-align:center">Loading data...</td><span class="citation-embed" data-citation="3"></span>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- SYNC PAGE -->
+        <div id="syncPage" class="page" style="display:none">
+            <div class="card">
+                <h3>Sinkronisasi Google Sheets</h3>
+                <div class="sync-status">
+                    <p>Status: <span id="connStatus" class="badge">Belum Dicoba</span></p>
+                    <p>Last Sync: <span id="lastSyncTime">-</span></p>
+                </div>
+                <div class="sync-buttons">
+                    <button class="btn-primary" id="testConnBtn"><i class="fas fa-plug"></i> Test Connection</button>
+                    <button class="btn-primary" id="pullDataBtn"><i class="fas fa-download"></i> Pull Data</button>
+                    <button class="btn-primary" id="pushDataBtn"><i class="fas fa-upload"></i> Push Data</button>
+                </div>
+                <div class="log-box">
+                    <h4>Log Aktivitas</h4>
+                    <div id="logList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SETTINGS PAGE -->
+        <div id="settingsPage" class="page" style="display:none">
+            <div class="card">
+                <h3>Konfigurasi API</h3>
+                <div class="form-group">
+                    <label>Google Apps Script URL</label>
+                    <input type="text" id="apiUrlInput" class="form-control" placeholder="https://script.google.com/macros/s/.../exec">
+                    <button class="btn-primary" id="saveApiBtn" style="margin-top:10px">Simpan</button>
+                </div>
+                <hr>
+                <h3>Ubah Password</h3>
+                <div class="form-group">
+                    <input type="password" id="oldPass" placeholder="Password Lama" class="form-control">
+                    <input type="password" id="newPass" placeholder="Password Baru" class="form-control">
+                    <input type="password" id="confirmPass" placeholder="Konfirmasi Password" class="form-control">
+                    <button class="btn-primary" id="changePassBtn">Ubah Password</button>
+                </div>
+                <hr>
+                <button class="btn-outline" id="sampleDataBtn"><i class="fas fa-database"></i> Tambah Sample Data</button>
+            </div>
+        </div>
     </div>
-  </div>
+</div>
 
-  <!-- MODAL FORM -->
-  <div id="pointModal" class="modal">
+<!-- MODAL TAMBAH/EDIT -->
+<div id="pointModal" class="modal">
     <div class="modal-content">
-      <h3 id="modalTitle">Tambah / Edit Titik</h3>
-      <form id="pointForm">
-        <input type="hidden" id="editId">
-        <div class="form-row">
-          <div class="form-group"><label>Dusun *</label><input type="text" id="dusun" required placeholder="Contoh: Dk. Ngrowo"></div>
-          <div class="form-group"><label>Desa *</label><input type="text" id="desa" required placeholder="Contoh: Kedewan"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Kecamatan</label><select id="kec"><option value="Kedewan">Kedewan</option><option value="Kasiman">Kasiman</option></select></div>
-          <div class="form-group"><label>Status Sinyal</label><select id="status"><option value="blank">Blank Spot</option><option value="lemah">Sinyal Lemah</option><option value="sedang">Sinyal Sedang</option><option value="baik">Sinyal Baik</option></select></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Latitude</label><input type="number" step="any" id="lat" required placeholder="-7.105"></div>
-          <div class="form-group"><label>Longitude</label><input type="number" step="any" id="lng" required placeholder="111.630"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Populasi (jiwa)</label><input type="number" id="populasi" value="0"></div>
-          <div class="form-group"><label>Provider</label><input type="text" id="provider" placeholder="Telkomsel/XL/Indosat"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Luas (ha)</label><input type="text" id="luas" placeholder="Contoh: 2.1 ha"></div>
-          <div class="form-group"><label>Elevasi (mdpl)</label><input type="number" id="elev" value="0"></div>
-        </div>
-        <div class="form-group"><label>Keterangan</label><input type="text" id="ket" placeholder="Contoh: Tertutup bukit, blank spot"></div>
-        <div class="modal-buttons"><button type="button" class="btn-outline" id="closeModalBtn">Batal</button><button type="submit" class="btn-primary">Simpan</button></div>
-      </form>
+        <h3 id="modalTitle">Tambah Titik</h3>
+        <form id="pointForm">
+            <input type="hidden" id="editId">
+            <input type="text" id="dusun" placeholder="Dusun" required>
+            <input type="text" id="desa" placeholder="Desa" required>
+            <select id="kec">
+                <option value="Kedewan">Kedewan</option>
+                <option value="Kasiman">Kasiman</option>
+            </select>
+            <select id="status">
+                <option value="blank">Blank Spot</option>
+                <option value="lemah">Sinyal Lemah</option>
+                <option value="sedang">Sinyal Sedang</option>
+                <option value="baik">Sinyal Baik</option>
+            </select>
+            <input type="number" step="any" id="lat" placeholder="Latitude" required>
+            <input type="number" step="any" id="lng" placeholder="Longitude" required>
+            <input type="number" id="populasi" placeholder="Populasi">
+            <input type="text" id="provider" placeholder="Provider">
+            <div class="modal-buttons">
+                <button type="button" class="btn-outline" id="closeModal">Batal</button>
+                <button type="submit" class="btn-primary">Simpan</button>
+            </div>
+        </form>
     </div>
-  </div>
 </div>
 
 <script src="script.js"></script>
