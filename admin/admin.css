@@ -21,6 +21,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
+    z-index: 1000;
 }
 
 .login-container {
@@ -358,6 +359,7 @@ body {
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 12px;
+    background: #e2e8f0;
 }
 
 .form-group {
