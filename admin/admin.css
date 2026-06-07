@@ -315,7 +315,45 @@ body {
     justify-content: flex-end;
     margin-top: 15px;
 }
+/* Tambahkan ke admin.css setelah modal-content */
 
+/* Modal improvements */
+.modal {
+    z-index: 2000;
+}
+
+.modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-content input, .modal-content select {
+    width: 100%;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.modal-content input:focus, .modal-content select:focus {
+    outline: none;
+    border-color: #00d4ff;
+    box-shadow: 0 0 0 2px rgba(0,212,255,0.2);
+}
+
+.modal-buttons {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+/* Badge status colors */
+.badge-blank { background: #fee2e2; color: #dc2626; }
+.badge-lemah { background: #fef3c7; color: #d97706; }
+.badge-sedang { background: #ffedd5; color: #ea580c; }
+.badge-baik { background: #d1fae5; color: #059669; }
 /* ========== SYNC SECTION ========== */
 .sync-status {
     background: #f8fafc;
