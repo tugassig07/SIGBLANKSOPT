@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=yes">
+  <meta name="theme-color" content="#0B0F19">
+  <title>SIG Blank Spot Internet 2026 — Kedewan & Kasiman | Live Data</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"/>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+  <div class="data-status-bar" id="dataStatusBar">
+    <div class="status-indicator"><div class="status-dot" id="statusDot"></div><span id="statusText">Memuat data...</span></div>
+    <div class="last-update" id="lastUpdate">-</div>
+    <button class="refresh-btn" onclick="refreshData()">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <path d="M23 4v6h-6M1 20v-6h6"/>
+        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+      </svg>
+      Refresh
+    </button>
+  </div>
+
+  <nav class="top-bar">
+    <button class="menu-toggle" onclick="toggleSidebar()">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
+    <div class="brand">
+      <div class="brand-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="currentColor" stroke-width="1.5" fill="none"/>
+          <path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>SIG Blank Spot <span class="year-badge">2026</span></h1>
+        <span>Kedewan & Kasiman, Bojonegoro</span>
+      </div>
+    </div>
+    <div class="live-indicator">
+      <div class="live-pulse"></div>
+      <span>Live Data</span>
+    </div>
+    <div class="top-actions">
+      <button class="icon-btn" onclick="togglePanel('search')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="togglePanel('layers')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+      </button>
+      <button class="icon-btn" onclick="togglePanel('stats')">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+      </button>
+    </div>
+  </nav>
+
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-logo">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" stroke="#00D4FF" stroke-width="1.5"/>
+          <path d="M12 6v6l4 2" stroke="#00D4FF"/>
+        </svg>
+        <span>Menu</span>
+      </div>
+      <button class="sidebar-close" onclick="closeSidebar()">&times;</button>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="#" onclick="togglePanel('search'); closeSidebar(); return false;" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <span>Cari Lokasi</span>
+      </a>
+      <a href="#" onclick="togglePanel('layers'); closeSidebar(); return false;" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <polygon points="12 2 2 7 12 12 22 7 12 2"/>
+          <polyline points="2 17 12 22 22 17"/>
+          <polyline points="2 12 12 17 22 12"/>
+        </svg>
+        <span>Filter & Layer</span>
+      </a>
+      <a href="#" onclick="togglePanel('stats'); closeSidebar(); return false;" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span>Statistik</span>
+      </a>
+      <a href="#" onclick="exportToCSV(); closeSidebar(); return false;" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Export Data</span>
+      </a>
+      <div class="sidebar-divider"></div>
+      <a href="#" onclick="toggleDarkMode(); closeSidebar(); return false;" class="sidebar-link">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+        </svg>
+        <span>Dark/Light Mode</span>
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="sidebar-version">SIG Blank Spot v2.0.2026</div>
+      <div>© BPS Bojonegoro 2026</div>
+    </div>
+  </div>
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+  <div class="stats-float">
+    <div class="stat-float-card" data-status="blank" onclick="quickFilter('blank')">
+      <div class="stat-float-icon">🔴</div>
+      <div class="stat-float-info">
+        <div class="stat-float-val" id="h-blankspot">0</div>
+        <div class="stat-float-lbl">Blank Spot</div>
+      </div>
+      <div class="stat-float-bar"><div class="stat-float-fill" style="width:0%;background:var(--danger)"></div></div>
+    </div>
+    <div class="stat-float-card" data-status="lemah" onclick="quickFilter('lemah')">
+      <div class="stat-float-icon">🟡</div>
+      <div class="stat-float-info">
+        <div class="stat-float-val" id="h-lemah">0</div>
+        <div class="stat-float-lbl">Sinyal Lemah</div>
+      </div>
+      <div class="stat-float-bar"><div class="stat-float-fill" style="width:0%;background:var(--warning)"></div></div>
+    </div>
+    <div class="stat-float-card" data-status="sedang" onclick="quickFilter('sedang')">
+      <div class="stat-float-icon">🟠</div>
+      <div class="stat-float-info">
+        <div class="stat-float-val" id="h-sedang">0</div>
+        <div class="stat-float-lbl">Sinyal Sedang</div>
+      </div>
+      <div class="stat-float-bar"><div class="stat-float-fill" style="width:0%;background:var(--orange)"></div></div>
+    </div>
+    <div class="stat-float-card" data-status="baik" onclick="quickFilter('baik')">
+      <div class="stat-float-icon">🟢</div>
+      <div class="stat-float-info">
+        <div class="stat-float-val" id="h-baik">0</div>
+        <div class="stat-float-lbl">Sinyal Baik</div>
+      </div>
+      <div class="stat-float-bar"><div class="stat-float-fill" style="width:0%;background:var(--success)"></div></div>
+    </div>
+  </div>
+
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="map-controls">
+      <button class="map-control-btn" onclick="locateUser()" title="Lokasi saya">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M12 2v4M12 18v4M2 12h4M18 12h4"/>
+        </svg>
+      </button>
+      <button class="map-control-btn" onclick="toggleHeatmap(this)" id="heatmapBtn" title="Heatmap">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M12 2a10 10 0 0 1 10 10c0 5.523-4.477 10-10 10S2 17.523 2 12 10 2 12 2z"/>
+          <circle cx="12" cy="12" r="4"/>
+        </svg>
+      </button>
+      <button class="map-control-btn" onclick="resetView()" title="Reset">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M3 12a9 9 0 1 0 9-9m-4 4L3 3m0 4V3h4"/>
+        </svg>
+      </button>
+      <div class="map-control-divider"></div>
+      <button class="map-control-btn" onclick="setLayer('satellite', this)" id="layerSat" title="Satelit">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          <polyline points="3.27 6.96 12 12.01 20.73 6.96"/>
+        </svg>
+      </button>
+      <button class="map-control-btn" onclick="setLayer('osm', this)" id="layerOsm" title="Peta Jalan">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <rect x="3" y="3" width="7" height="7"/>
+          <rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/>
+          <rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-ring"></div>
+      <div class="loading-text">Mengambil data dari Google Sheets...</div>
+      <div class="loading-sub">Kedewan & Kasiman, Bojonegoro</div>
+      <div class="loading-progress"><div class="loading-progress-bar" id="loadingProgressBar"></div></div>
+    </div>
+
+    <div class="info-badge">
+      <div class="info-badge-header">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+        <span>Info Layer</span>
+      </div>
+      <div class="info-badge-body">
+        <div class="info-row"><span class="info-key">Data Source</span><span class="info-val">Google Sheets</span></div>
+        <div class="info-row"><span class="info-key">Titik</span><span class="info-val" id="badgePoints">0 total</span></div>
+        <div class="info-row"><span class="info-key">Last Sync</span><span class="info-val" id="badgeLastSync">-</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="glass-panel" id="panel-search" style="display:none">
+    <div class="glass-panel-header"><h3>Cari Lokasi</h3><button class="glass-close" onclick="togglePanel('search')">&times;</button></div>
+    <div class="glass-panel-body">
+      <div class="search-input-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input type="text" id="searchInput" placeholder="Cari desa, dusun..." onkeyup="debouncedFilter()">
+      </div>
+      <div class="filter-result" id="filterStats"></div>
+    </div>
+  </div>
+
+  <div class="glass-panel" id="panel-layers" style="display:none">
+    <div class="glass-panel-header"><h3>Filter & Layer</h3><button class="glass-close" onclick="togglePanel('layers')">&times;</button></div>
+    <div class="glass-panel-body">
+      <div class="filter-section">
+        <label class="filter-title">Kecamatan</label>
+        <div class="chip-group">
+          <button class="chip active" onclick="setFilterKec('all', this)">Semua</button>
+          <button class="chip" onclick="setFilterKec('Kedewan', this)">Kedewan</button>
+          <button class="chip" onclick="setFilterKec('Kasiman', this)">Kasiman</button>
+        </div>
+      </div>
+      <div class="filter-section">
+        <label class="filter-title">Status Sinyal</label>
+        <div class="chip-group">
+          <button class="chip active" onclick="setFilterStatus('all', this)">Semua</button>
+          <button class="chip chip-danger" onclick="setFilterStatus('blank', this)">🔴 Blank</button>
+          <button class="chip chip-warning" onclick="setFilterStatus('lemah', this)">🟡 Lemah</button>
+          <button class="chip" onclick="setFilterStatus('sedang', this)">🟠 Sedang</button>
+          <button class="chip chip-success" onclick="setFilterStatus('baik', this)">🟢 Baik</button>
+        </div>
+      </div>
+      <div class="filter-section">
+        <label class="filter-title">Legenda</label>
+        <div class="legend-list">
+          <div class="legend-row" onclick="setFilterStatus('blank')"><div class="legend-dot" style="background:var(--danger)"></div><span class="legend-name">Blank Spot</span><span class="legend-count" id="cnt-blank">0</span></div>
+          <div class="legend-row" onclick="setFilterStatus('lemah')"><div class="legend-dot" style="background:var(--warning)"></div><span class="legend-name">Sinyal Lemah</span><span class="legend-count" id="cnt-lemah">0</span></div>
+          <div class="legend-row" onclick="setFilterStatus('sedang')"><div class="legend-dot" style="background:var(--orange)"></div><span class="legend-name">Sinyal Sedang</span><span class="legend-count" id="cnt-sedang">0</span></div>
+          <div class="legend-row" onclick="setFilterStatus('baik')"><div class="legend-dot" style="background:var(--success)"></div><span class="legend-name">Sinyal Baik</span><span class="legend-count" id="cnt-baik">0</span></div>
+        </div>
+      </div>
+      <div class="filter-section">
+        <button class="reset-filter-btn" onclick="resetFilters()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 12a9 9 0 1 0 9-9m-4 4L3 3m0 4V3h4"/>
+          </svg>
+          Reset Semua Filter
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass-panel" id="panel-stats" style="display:none">
+    <div class="glass-panel-header"><h3>Statistik Wilayah 2026</h3><button class="glass-close" onclick="togglePanel('stats')">&times;</button></div>
+    <div class="glass-panel-body">
+      <div class="donut-section">
+        <div class="donut-chart">
+          <svg viewBox="0 0 100 100" class="donut-svg">
+            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="10"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--danger)" stroke-width="10" stroke-dasharray="0 251" id="donutBlank"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--warning)" stroke-width="10" stroke-dasharray="0 251" id="donutLemah"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--orange)" stroke-width="10" stroke-dasharray="0 251" id="donutSedang"/>
+            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--success)" stroke-width="10" stroke-dasharray="0 251" id="donutBaik"/>
+          </svg>
+          <div class="donut-center">
+            <div class="donut-val" id="h-total">0</div>
+            <div class="donut-lbl">Total Titik</div>
+          </div>
+        </div>
+        <div class="donut-legend">
+          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--danger)"></div><span>Blank Spot</span><span id="dl-blank">0</span></div>
+          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--warning)"></div><span>Sinyal Lemah</span><span id="dl-lemah">0</span></div>
+          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--orange)"></div><span>Sinyal Sedang</span><span id="dl-sedang">0</span></div>
+          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--success)"></div><span>Sinyal Baik</span><span id="dl-baik">0</span></div>
+        </div>
+      </div>
+      <div class="stat-cards-grid">
+        <div class="stat-mini-card">
+          <div class="stat-mini-icon" style="background:rgba(0,170,255,0.15);color:#00AAFF">📍</div>
+          <div class="stat-mini-info">
+            <div class="stat-mini-val" id="s-kedewan-blank">0</div>
+            <div class="stat-mini-lbl">Kedewan Blank Spot</div>
+          </div>
+        </div>
+        <div class="stat-mini-card">
+          <div class="stat-mini-icon" style="background:rgba(255,107,53,0.15);color:#FF6B35">📍</div>
+          <div class="stat-mini-info">
+            <div class="stat-mini-val" id="s-kasiman-blank">0</div>
+            <div class="stat-mini-lbl">Kasiman Blank Spot</div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-section">
+        <div class="chart-header">
+          <span>📊 Cakupan per Desa</span>
+          <span class="chart-total" id="desaCount">0 Desa</span>
+        </div>
+        <div class="chart-bars" id="miniChart">
+          <div style="text-align: center; padding: 40px; color: var(--text3);">
+            <i class="fas fa-chart-bar" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
+            Belum ada data
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="bottom-sheet" id="bottomSheet">
+    <div class="bottom-sheet-handle"></div>
+    <div class="bottom-sheet-content">
+      <div class="bottom-sheet-title">Informasi Titik</div>
+      <div class="bottom-sheet-body" id="bottomSheetBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
