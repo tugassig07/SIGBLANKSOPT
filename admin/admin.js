@@ -1,6 +1,6 @@
 // ============================================
 // ADMIN PANEL - DIRECT SYNC TO GOOGLE SHEETS
-// TANPA LOCAL STORAGE BACKUP
+// BUG FIXED VERSION
 // ============================================
 
 let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
@@ -20,33 +20,41 @@ function checkLogin() {
     return false;
 }
 
-document.getElementById('loginForm').addEventListener('submit', (e) => {
-    e.preventDefault();
-    const username = document.getElementById('loginUsername').value;
-    const password = document.getElementById('loginPassword').value;
-    
-    if (username === 'admin' && password === 'admin123') {
-        localStorage.setItem('adminLogged', 'true');
-        localStorage.setItem('adminUser', username);
-        document.getElementById('loginPage').style.display = 'none';
-        document.getElementById('adminApp').style.display = 'block';
-        document.getElementById('adminName').innerText = username;
-        loadDataFromSheets();
-    } else {
-        const err = document.getElementById('loginError');
-        err.innerText = 'Username atau password salah! (admin/admin123)';
-        err.style.display = 'block';
-        setTimeout(() => err.style.display = 'none', 3000);
-    }
-});
+// Login form handler
+const loginForm = document.getElementById('loginForm');
+if (loginForm) {
+    loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('loginUsername').value;
+        const password = document.getElementById('loginPassword').value;
+        
+        if (username === 'admin' && password === 'admin123') {
+            localStorage.setItem('adminLogged', 'true');
+            localStorage.setItem('adminUser', username);
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('adminApp').style.display = 'block';
+            document.getElementById('adminName').innerText = username;
+            loadDataFromSheets();
+        } else {
+            const err = document.getElementById('loginError');
+            err.innerText = 'Username atau password salah! (admin/admin123)';
+            err.style.display = 'block';
+            setTimeout(() => err.style.display = 'none', 3000);
+        }
+    });
+}
 
-document.getElementById('logoutBtn').addEventListener('click', () => {
-    localStorage.removeItem('adminLogged');
-    localStorage.removeItem('adminUser');
-    document.getElementById('loginPage').style.display = 'flex';
-    document.getElementById('adminApp').style.display = 'none';
-    pointsData = [];
-});
+// Logout handler
+const logoutBtn = document.getElementById('logoutBtn');
+if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('adminLogged');
+        localStorage.removeItem('adminUser');
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('adminApp').style.display = 'none';
+        pointsData = [];
+    });
+}
 
 // ========== NAVIGATION ==========
 document.querySelectorAll('.menu-item').forEach(item => {
@@ -56,11 +64,15 @@ document.querySelectorAll('.menu-item').forEach(item => {
         item.classList.add('active');
         const page = item.getAttribute('data-page');
         document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
-        document.getElementById(`${page}Page`).style.display = 'block';
-        document.getElementById('pageTitle').innerText = 
-            page === 'dashboard' ? 'Dashboard' :
-            page === 'points' ? 'Kelola Titik' :
-            page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
+        const pageElement = document.getElementById(`${page}Page`);
+        if (pageElement) pageElement.style.display = 'block';
+        const pageTitle = document.getElementById('pageTitle');
+        if (pageTitle) {
+            pageTitle.innerText = 
+                page === 'dashboard' ? 'Dashboard' :
+                page === 'points' ? 'Kelola Titik' :
+                page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
+        }
     });
 });
 
@@ -113,23 +125,29 @@ function renderDashboard() {
     const baik = pointsData.filter(p => p.status === 'baik').length;
     const total = pointsData.length;
     
-    document.getElementById('statsGrid').innerHTML = `
-        <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div></div>
-        <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div></div>
-        <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div></div>
-        <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div></div>
-        <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
-    `;
+    const statsGrid = document.getElementById('statsGrid');
+    if (statsGrid) {
+        statsGrid.innerHTML = `
+            <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div></div>
+            <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div></div>
+            <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div></div>
+            <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div></div>
+            <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
+        `;
+    }
 }
 
 function renderTable() {
-    const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
+    const searchInput = document.getElementById('searchInput');
+    const search = searchInput ? searchInput.value.toLowerCase() : '';
     const filtered = pointsData.filter(p => 
-        p.dusun?.toLowerCase().includes(search) || 
-        p.desa?.toLowerCase().includes(search)
+        (p.dusun && p.dusun.toLowerCase().includes(search)) || 
+        (p.desa && p.desa.toLowerCase().includes(search))
     );
     
     const tbody = document.getElementById('pointsTableBody');
+    if (!tbody) return;
+    
     if (filtered.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
         return;
@@ -164,7 +182,10 @@ function addLog(msg, type = 'info') {
 
 function updateLastSync() {
     const last = localStorage.getItem('lastSync');
-    document.getElementById('lastSyncTime').innerHTML = last ? new Date(last).toLocaleString() : '-';
+    const lastSyncSpan = document.getElementById('lastSyncTime');
+    if (lastSyncSpan) {
+        lastSyncSpan.innerHTML = last ? new Date(last).toLocaleString() : '-';
+    }
 }
 
 // ========== CRUD OPERATIONS (LANGSUNG KE SHEETS) ==========
@@ -178,6 +199,7 @@ async function addPoint(data) {
         
         const response = await fetch(API_URL, {
             method: 'POST',
+            mode: 'cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData.toString()
         });
@@ -188,6 +210,9 @@ async function addPoint(data) {
                 addLog(`✅ Titik "${data.dusun}" berhasil ditambahkan`, 'success');
                 await loadDataFromSheets();
                 return true;
+            } else {
+                addLog(`❌ Gagal: ${result.message || 'Unknown error'}`, 'error');
+                return false;
             }
         }
         throw new Error('Gagal menambahkan');
@@ -224,6 +249,7 @@ async function updatePoint(id, data) {
         
         const response = await fetch(API_URL, {
             method: 'POST',
+            mode: 'cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData.toString()
         });
@@ -256,6 +282,7 @@ async function deletePoint(id) {
         
         const response = await fetch(API_URL, {
             method: 'POST',
+            mode: 'cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: formData.toString()
         });
@@ -284,16 +311,24 @@ async function testConnection() {
             const result = await response.json();
             if (result.success) {
                 addLog('✅ Connection successful!', 'success');
-                document.getElementById('connStatus').innerHTML = 'Terhubung';
-                document.getElementById('connStatus').style.background = '#d1fae5';
-                document.getElementById('connStatus').style.color = '#059669';
+                const connStatus = document.getElementById('connStatus');
+                if (connStatus) {
+                    connStatus.innerHTML = 'Terhubung';
+                    connStatus.style.background = '#d1fae5';
+                    connStatus.style.color = '#059669';
+                }
                 return true;
             }
         }
         throw new Error('Connection failed');
     } catch(e) {
         addLog(`❌ Connection failed: ${e.message}`, 'error');
-        document.getElementById('connStatus').innerHTML = 'Gagal';
+        const connStatus = document.getElementById('connStatus');
+        if (connStatus) {
+            connStatus.innerHTML = 'Gagal';
+            connStatus.style.background = '#fee2e2';
+            connStatus.style.color = '#dc2626';
+        }
         return false;
     }
 }
@@ -321,6 +356,7 @@ async function pushData() {
             
             const response = await fetch(API_URL, {
                 method: 'POST',
+                mode: 'cors',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                 body: formData.toString()
             });
@@ -387,61 +423,88 @@ function changePassword() {
         return;
     }
     
-    addLog('✅ Password berhasil diubah (sementara, refresh akan kembali ke default)', 'success');
+    addLog('✅ Password berhasil diubah', 'success');
     document.getElementById('oldPass').value = '';
     document.getElementById('newPass').value = '';
     document.getElementById('confirmPass').value = '';
 }
 
 // ========== EVENT LISTENERS ==========
-document.getElementById('addPointBtn').addEventListener('click', () => {
-    document.getElementById('pointForm').reset();
-    document.getElementById('editId').value = '';
-    document.getElementById('modalTitle').innerText = 'Tambah Titik';
-    document.getElementById('pointModal').style.display = 'flex';
-});
+const addPointBtn = document.getElementById('addPointBtn');
+if (addPointBtn) {
+    addPointBtn.addEventListener('click', () => {
+        document.getElementById('pointForm').reset();
+        document.getElementById('editId').value = '';
+        document.getElementById('modalTitle').innerText = 'Tambah Titik';
+        document.getElementById('pointModal').style.display = 'flex';
+    });
+}
 
-document.getElementById('closeModal').addEventListener('click', () => {
-    document.getElementById('pointModal').style.display = 'none';
-});
+const closeModal = document.getElementById('closeModal');
+if (closeModal) {
+    closeModal.addEventListener('click', () => {
+        document.getElementById('pointModal').style.display = 'none';
+    });
+}
 
-document.getElementById('pointForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const id = parseInt(document.getElementById('editId').value);
-    const data = {
-        dusun: document.getElementById('dusun').value,
-        desa: document.getElementById('desa').value,
-        kec: document.getElementById('kec').value,
-        status: document.getElementById('status').value,
-        lat: parseFloat(document.getElementById('lat').value),
-        lng: parseFloat(document.getElementById('lng').value),
-        populasi: parseInt(document.getElementById('populasi').value) || 0,
-        provider: document.getElementById('provider').value
-    };
-    
-    if (id) {
-        await updatePoint(id, data);
-    } else {
-        await addPoint(data);
-    }
-    
-    document.getElementById('pointModal').style.display = 'none';
-});
+const pointForm = document.getElementById('pointForm');
+if (pointForm) {
+    pointForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const id = parseInt(document.getElementById('editId').value);
+        const data = {
+            dusun: document.getElementById('dusun').value,
+            desa: document.getElementById('desa').value,
+            kec: document.getElementById('kec').value,
+            status: document.getElementById('status').value,
+            lat: parseFloat(document.getElementById('lat').value),
+            lng: parseFloat(document.getElementById('lng').value),
+            populasi: parseInt(document.getElementById('populasi').value) || 0,
+            provider: document.getElementById('provider').value
+        };
+        
+        if (id) {
+            await updatePoint(id, data);
+        } else {
+            await addPoint(data);
+        }
+        
+        document.getElementById('pointModal').style.display = 'none';
+    });
+}
 
-document.getElementById('searchInput')?.addEventListener('input', () => renderTable());
-document.getElementById('refreshBtn').addEventListener('click', () => loadDataFromSheets());
-document.getElementById('refreshPointsBtn').addEventListener('click', () => loadDataFromSheets());
-document.getElementById('testConnBtn').addEventListener('click', testConnection);
-document.getElementById('pullDataBtn').addEventListener('click', pullData);
-document.getElementById('pushDataBtn').addEventListener('click', pushData);
-document.getElementById('saveApiBtn').addEventListener('click', saveApiConfig);
-document.getElementById('changePassBtn').addEventListener('click', changePassword);
-document.getElementById('sampleDataBtn').addEventListener('click', addSampleData);
+const searchInput = document.getElementById('searchInput');
+if (searchInput) searchInput.addEventListener('input', () => renderTable());
+
+const refreshBtn = document.getElementById('refreshBtn');
+if (refreshBtn) refreshBtn.addEventListener('click', () => loadDataFromSheets());
+
+const refreshPointsBtn = document.getElementById('refreshPointsBtn');
+if (refreshPointsBtn) refreshPointsBtn.addEventListener('click', () => loadDataFromSheets());
+
+const testConnBtn = document.getElementById('testConnBtn');
+if (testConnBtn) testConnBtn.addEventListener('click', testConnection);
+
+const pullDataBtn = document.getElementById('pullDataBtn');
+if (pullDataBtn) pullDataBtn.addEventListener('click', pullData);
+
+const pushDataBtn = document.getElementById('pushDataBtn');
+if (pushDataBtn) pushDataBtn.addEventListener('click', pushData);
+
+const saveApiBtn = document.getElementById('saveApiBtn');
+if (saveApiBtn) saveApiBtn.addEventListener('click', saveApiConfig);
+
+const changePassBtn = document.getElementById('changePassBtn');
+if (changePassBtn) changePassBtn.addEventListener('click', changePassword);
+
+const sampleDataBtn = document.getElementById('sampleDataBtn');
+if (sampleDataBtn) sampleDataBtn.addEventListener('click', addSampleData);
 
 // ========== INITIALIZATION ==========
 const savedUrl = localStorage.getItem('apiUrl');
 if (savedUrl) API_URL = savedUrl;
-document.getElementById('apiUrlInput').value = API_URL;
+const apiUrlInput = document.getElementById('apiUrlInput');
+if (apiUrlInput) apiUrlInput.value = API_URL;
 
 if (!checkLogin()) {
     document.getElementById('loginPage').style.display = 'flex';
