@@ -1,263 +1,429 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
-  <meta name="theme-color" content="#F1F5F9">
-  <title>Admin Panel SIG Blank Spot - Google Sheets Sync</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="admin.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>Admin SIG Blank Spot — Bojonegoro 2026</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
-<!-- LOGIN MODAL -->
-<div id="loginModal" class="modal" style="display: flex;">
-  <div class="modal-content login-modal">
-    <div class="login-header">
-      <div class="login-logo">
-        <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
-        <div class="logo-text">
-          <h2>Admin SIG Blank Spot</h2>
-          <p>Bojonegoro 2026</p>
+<!-- ===== LOGIN PAGE ===== -->
+<div id="loginPage" class="login-container">
+    <div class="login-bg-orbs">
+        <span class="orb orb-1"></span>
+        <span class="orb orb-2"></span>
+        <span class="orb orb-3"></span>
+    </div>
+    <div class="login-card">
+        <div class="login-brand">
+            <div class="login-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="login-brand-text">
+                <span class="brand-main">SIG Blank Spot</span>
+                <span class="brand-sub">Bojonegoro 2026</span>
+            </div>
         </div>
-      </div>
+        <h2>Selamat Datang</h2>
+        <p>Masuk ke panel admin pengelolaan titik blank spot</p>
+        <div class="input-wrapper">
+            <i class="fas fa-user input-icon"></i>
+            <input type="text" id="usernameInput" class="login-input"
+                   placeholder="Username" value="admin" autocomplete="off">
+        </div>
+        <div class="input-wrapper">
+            <i class="fas fa-lock input-icon"></i>
+            <input type="password" id="passwordInput" class="login-input"
+                   placeholder="Kata sandi admin"
+                   onkeypress="if(event.key==='Enter') login()">
+            <button class="pw-toggle" onclick="togglePassword()" tabindex="-1">
+                <i class="fas fa-eye" id="pwEyeIcon"></i>
+            </button>
+        </div>
+        <button onclick="login()" class="login-btn">
+            <span>Masuk</span>
+            <i class="fas fa-arrow-right"></i>
+        </button>
+        <div id="loginError" class="login-error">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="loginErrorMsg">Username atau password salah!</span>
+        </div>
     </div>
-    <form id="loginForm">
-      <div class="form-group">
-        <label><i class="fas fa-user"></i> Username</label>
-        <input type="text" id="loginUsername" placeholder="Masukkan username" required autocomplete="off">
-      </div>
-      <div class="form-group">
-        <label><i class="fas fa-lock"></i> Password</label>
-        <input type="password" id="loginPassword" placeholder="Masukkan password" required>
-      </div>
-      <div class="login-error" id="loginError"></div>
-      <button type="submit" class="btn-primary login-btn">
-        <i class="fas fa-sign-in-alt"></i> Login
-      </button>
-    </form>
-    <div class="login-footer">
-      <small>© PTI IKIP PGRI BOJONEGORO 2026</small>
-    </div>
-  </div>
 </div>
 
-<!-- MAIN ADMIN CONTENT (Hidden by default) -->
-<div id="adminContent" style="display: none;">
-  <!-- Mobile Menu Toggle Button -->
-  <div class="mobile-menu-toggle" id="mobileMenuToggle">
-    <i class="fas fa-bars"></i>
-  </div>
-  <div class="mobile-menu-overlay" id="mobileMenuOverlay"></div>
+<!-- ===== ADMIN PANEL ===== -->
+<div id="adminPanel" style="display:none;">
 
-  <div class="admin-wrapper">
-    <div class="sidebar-admin" id="sidebarAdmin">
-      <div class="sidebar-header-mobile">
-        <div class="logo-area">
-          <div class="logo-icon"><i class="fas fa-chart-line"></i></div>
-          <div class="logo-text">
-            <h2>Admin SIG Blank Spot</h2>
-            <p>Google Sheets Sync</p>
-          </div>
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-logo">
+                <div class="sidebar-logo-icon"><i class="fas fa-chart-line"></i></div>
+                <div>
+                    <div class="sidebar-logo-name">SIG<span>Blank Spot</span></div>
+                    <div class="sidebar-logo-tagline">Admin Panel 2026</div>
+                </div>
+            </div>
         </div>
-        <button class="sidebar-close-mobile" id="sidebarCloseMobile">
-          <i class="fas fa-times"></i>
-        </button>
-      </div>
-      <div class="nav-item active" data-tab="dashboard">
-        <i class="fas fa-tachometer-alt"></i> 
-        <span>Dashboard</span>
-      </div>
-      <div class="nav-item" data-tab="points">
-        <i class="fas fa-map-marker-alt"></i> 
-        <span>Kelola Titik</span>
-      </div>
-      <div class="nav-item" data-tab="sync">
-        <i class="fas fa-cloud-upload-alt"></i> 
-        <span>Sinkronisasi</span>
-      </div>
-      <div class="nav-item" data-tab="settings">
-        <i class="fas fa-cog"></i> 
-        <span>Pengaturan</span>
-      </div>
-      <div class="nav-item logout-item" id="logoutBtn">
-        <i class="fas fa-sign-out-alt"></i> 
-        <span>Logout</span>
-      </div>
-    </div>
 
-    <div class="main-content">
-      <!-- Top Bar Mobile Friendly -->
-      <div class="top-bar-admin">
-        <div class="mobile-menu-btn" id="mobileMenuBtn">
-          <i class="fas fa-bars"></i>
-        </div>
-        <div class="page-title" id="mainTitle">Dashboard SIG 2026</div>
-        <div class="admin-badge desktop-only">
-          <i class="fas fa-user-shield"></i> 
-          <span id="adminName">Admin</span>
-        </div>
-      </div>
+        <nav class="sidebar-nav">
+            <div class="nav-group-label">Menu</div>
+            <div class="nav-item active" data-page="dashboard">
+                <div class="nav-icon"><i class="fas fa-gauge-high"></i></div>
+                <span>Dashboard</span>
+                <div class="nav-indicator"></div>
+            </div>
+            <div class="nav-item" data-page="points">
+                <div class="nav-icon"><i class="fas fa-map-marker-alt"></i></div>
+                <span>Kelola Titik</span>
+                <div class="nav-indicator"></div>
+            </div>
+            <div class="nav-item" data-page="sync">
+                <div class="nav-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                <span>Sinkronisasi</span>
+                <div class="nav-indicator"></div>
+            </div>
+            <div class="nav-item" data-page="settings">
+                <div class="nav-icon"><i class="fas fa-cog"></i></div>
+                <span>Pengaturan</span>
+                <div class="nav-indicator"></div>
+            </div>
+        </nav>
 
-      <!-- User Info Mobile -->
-      <div class="user-info-mobile mobile-only" id="userInfoMobile">
-        <i class="fas fa-user-circle"></i>
-        <span id="adminNameMobile">Admin</span>
-        <span class="sync-status-mobile" id="syncStatusMobile">
-          <i class="fas fa-cloud"></i> Tersinkronasi
-        </span>
-      </div>
-
-      <div id="dashboardView">
-        <div class="stats-grid" id="statGrid"></div>
-        <div class="data-section">
-          <div class="section-header">
-            <h3><i class="fas fa-chart-simple"></i> Ringkasan Cepat</h3>
-            <button class="btn-outline" id="refreshDashboardBtn">
-              <i class="fas fa-rotate-right"></i> <span class="desktop-only">Sync Data</span>
+        <div class="sidebar-footer">
+            <div class="sidebar-admin-info">
+                <div class="admin-avatar"><i class="fas fa-user-shield"></i></div>
+                <div>
+                    <div class="admin-name" id="adminNameSidebar">Administrator</div>
+                    <div class="admin-role">SIG Blank Spot</div>
+                </div>
+            </div>
+            <button class="logout-btn" onclick="logout()">
+                <i class="fas fa-right-from-bracket"></i>
+                <span>Logout</span>
             </button>
-          </div>
         </div>
-      </div>
+    </aside>
 
-      <div id="pointsView" style="display: none;">
-        <div class="data-section">
-          <div class="section-header">
-            <h3><i class="fas fa-database"></i> Daftar Titik Survei</h3>
-            <div class="action-buttons">
-              <button class="btn-primary" id="addPointBtn">
-                <i class="fas fa-plus"></i> <span class="desktop-only">Tambah Titik</span>
-              </button>
-            </div>
-          </div>
-          <div class="search-filter-bar">
-            <div class="search-bar">
-              <i class="fas fa-search"></i>
-              <input type="text" id="searchPoint" placeholder="Cari dusun, desa...">
-            </div>
-            <button class="btn-outline mobile-sync-btn" id="syncNowBtnMobile">
-              <i class="fas fa-cloud-upload-alt"></i>
-            </button>
-          </div>
-          <div class="table-container">
-            <table id="pointsTable">
-              <thead>
-                <tr><th>ID</th><th>Dusun</th><th>Desa</th><th>Kecamatan</th><th>Status</th><th>Populasi</th><th>Provider</th><th>Aksi</th></tr>
-              </thead>
-              <tbody id="tableBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+    <!-- Mobile sidebar toggle -->
+    <button class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
 
-      <div id="syncView" style="display: none;">
-        <div class="data-section">
-          <h3><i class="fas fa-cloud-upload-alt"></i> Sinkronisasi Data</h3>
-          <div class="sync-info">
-            <div class="sync-card">
-              <div class="sync-icon"><i class="fab fa-google"></i></div>
-              <div class="sync-details">
-                <h4>Google Sheets API</h4>
-                <p>Status: <span id="apiStatus" class="status-badge status-connected">Terhubung</span></p>
-                <p>Last Sync: <span id="lastSync">-</span></p>
-              </div>
-            </div>
-            <div class="sync-actions">
-              <button class="btn-primary" id="pushToSheetBtn">
-                <i class="fas fa-upload"></i> <span class="desktop-only">Push ke Google Sheets</span>
-              </button>
-              <button class="btn-outline" id="pullFromSheetBtn">
-                <i class="fas fa-download"></i> <span class="desktop-only">Pull dari Google Sheets</span>
-              </button>
-              <button class="btn-outline" id="testConnectionBtn">
-                <i class="fas fa-plug"></i> <span class="desktop-only">Test Connection</span>
-              </button>
-            </div>
-          </div>
-          <div class="sync-log">
-            <h4><i class="fas fa-history"></i> Log Aktivitas</h4>
-            <div class="log-container" id="logContainer">
-              <div class="log-entry">📋 Sistem siap digunakan - Data kosong, silakan tambah titik baru</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <!-- Main Content -->
+    <main class="main-content">
 
-      <div id="settingsView" style="display: none;">
-        <div class="data-section">
-          <h3><i class="fas fa-key"></i> Konfigurasi API</h3>
-          <div class="form-group">
-            <label>Google Apps Script URL</label>
-            <input type="text" id="apiUrl" value="https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec">
-            <small>URL Web App dari Google Apps Script</small>
-          </div>
-          <button class="btn-primary" id="saveApiConfig">
-            <i class="fas fa-save"></i> Simpan Konfigurasi
-          </button>
-          <hr>
-          <h3><i class="fas fa-user-lock"></i> Ubah Password</h3>
-          <div class="form-group">
-            <label>Password Lama</label>
-            <input type="password" id="oldPassword" placeholder="Masukkan password lama">
-          </div>
-          <div class="form-group">
-            <label>Password Baru</label>
-            <input type="password" id="newPassword" placeholder="Masukkan password baru">
-          </div>
-          <div class="form-group">
-            <label>Konfirmasi Password Baru</label>
-            <input type="password" id="confirmPassword" placeholder="Konfirmasi password baru">
-          </div>
-          <button class="btn-primary" id="changePasswordBtn">
-            <i class="fas fa-key"></i> Ubah Password
-          </button>
-          <hr>
-          <button class="btn-primary" id="resetDataBtn">
-            <i class="fas fa-trash-alt"></i> Reset Data Kosong
-          </button>
+        <!-- Top Header -->
+        <header class="admin-header">
+            <div class="header-left">
+                <div class="header-breadcrumb" id="headerBreadcrumb">
+                    <i class="fas fa-gauge-high"></i> Dashboard
+                </div>
+                <h1 class="header-title" id="pageTitle">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="header-refresh" id="refreshBtn" onclick="refreshAllData()" title="Refresh data">
+                    <i class="fas fa-rotate-right" id="refreshIcon"></i>
+                </div>
+                <div class="header-datetime">
+                    <div class="header-time" id="currentTime">00:00</div>
+                    <div class="header-date" id="currentDate">Memuat...</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- ===== DASHBOARD PAGE ===== -->
+        <div id="dashboardPage" class="page active">
+            <div class="stats-grid">
+                <div class="stat-card stat-total">
+                    <div class="stat-meta">
+                        <div class="stat-label">Total Titik</div>
+                        <div class="stat-icon-wrap"><i class="fas fa-map-marker-alt"></i></div>
+                    </div>
+                    <div class="stat-number" id="totalTitik">0</div>
+                    <div class="stat-footer">Seluruh titik survei</div>
+                </div>
+                <div class="stat-card stat-waiting">
+                    <div class="stat-meta">
+                        <div class="stat-label">Blank Spot</div>
+                        <div class="stat-icon-wrap"><i class="fas fa-exclamation-triangle"></i></div>
+                    </div>
+                    <div class="stat-number" id="blankSpot">0</div>
+                    <div class="stat-footer">Prioritas tinggi</div>
+                </div>
+                <div class="stat-card stat-proses">
+                    <div class="stat-meta">
+                        <div class="stat-label">Sinyal Lemah</div>
+                        <div class="stat-icon-wrap"><i class="fas fa-signal"></i></div>
+                    </div>
+                    <div class="stat-number" id="sinyaLemah">0</div>
+                    <div class="stat-footer">Perlu perbaikan</div>
+                </div>
+                <div class="stat-card stat-done">
+                    <div class="stat-meta">
+                        <div class="stat-label">Sinyal Baik</div>
+                        <div class="stat-icon-wrap"><i class="fas fa-check-circle"></i></div>
+                    </div>
+                    <div class="stat-number" id="sinyalBaik">0</div>
+                    <div class="stat-footer">Cakupan optimal</div>
+                </div>
+            </div>
+
+            <div class="charts-grid">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Status Sinyal</h3>
+                        <span class="chart-badge"><i class="fas fa-chart-pie"></i> Distribusi</span>
+                    </div>
+                    <canvas id="statusChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <h3>Per Kecamatan</h3>
+                        <span class="chart-badge"><i class="fas fa-map"></i> Wilayah</span>
+                    </div>
+                    <canvas id="kecamatanChart"></canvas>
+                </div>
+            </div>
         </div>
-      </div>
+
+        <!-- ===== POINTS PAGE (Kelola Titik) ===== -->
+        <div id="pointsPage" class="page">
+            <div class="filter-bar">
+                <div class="search-wrap">
+                    <i class="fas fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" placeholder="Cari dusun, desa, kecamatan...">
+                    <button class="search-clear" id="searchClearBtn" onclick="clearSearch()" style="display:none;">
+                        <i class="fas fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="filter-controls">
+                    <div class="select-wrap">
+                        <i class="fas fa-location-dot"></i>
+                        <select id="filterKecamatan">
+                            <option value="all">Semua Kecamatan</option>
+                            <option value="Kedewan">Kedewan</option>
+                            <option value="Kasiman">Kasiman</option>
+                        </select>
+                    </div>
+                    <div class="select-wrap">
+                        <i class="fas fa-filter"></i>
+                        <select id="filterStatus">
+                            <option value="all">Semua Status</option>
+                            <option value="blank">Blank Spot</option>
+                            <option value="lemah">Sinyal Lemah</option>
+                            <option value="sedang">Sinyal Sedang</option>
+                            <option value="baik">Sinyal Baik</option>
+                        </select>
+                    </div>
+                    <button class="btn-primary" id="addPointBtn">
+                        <i class="fas fa-plus"></i>
+                        <span>Tambah Titik</span>
+                    </button>
+                    <button class="export-btn" onclick="exportToCSV()">
+                        <i class="fas fa-file-csv"></i>
+                        <span>Export</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-results-info" id="tableInfo"></div>
+
+            <div class="table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th class="col-no">No</th>
+                            <th>Dusun</th>
+                            <th>Desa</th>
+                            <th>Kecamatan</th>
+                            <th>Status</th>
+                            <th>Populasi</th>
+                            <th>Provider</th>
+                            <th class="col-aksi">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pointsTableBody">
+                        <tr><td colspan="8" class="loading-cell">
+                            <div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>
+                            <span>Memuat data…</span>
+                        </td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- ===== SYNC PAGE ===== -->
+        <div id="syncPage" class="page">
+            <div class="sync-info-card">
+                <div class="sync-header">
+                    <i class="fab fa-google"></i>
+                    <h3>Sinkronisasi Google Sheets</h3>
+                </div>
+                <div class="sync-stats">
+                    <div class="sync-stat">
+                        <span class="sync-label">Status API</span>
+                        <span class="sync-value status-connected" id="apiStatus">
+                            <i class="fas fa-check-circle"></i> Terhubung
+                        </span>
+                    </div>
+                    <div class="sync-stat">
+                        <span class="sync-label">Terakhir Sync</span>
+                        <span class="sync-value" id="lastSyncTime">Belum pernah</span>
+                    </div>
+                    <div class="sync-stat">
+                        <span class="sync-label">Jumlah Data</span>
+                        <span class="sync-value" id="totalDataSync">0 titik</span>
+                    </div>
+                </div>
+                <div class="sync-actions">
+                    <button class="btn-primary" id="pushToSheetBtn">
+                        <i class="fas fa-upload"></i> Push ke Google Sheets
+                    </button>
+                    <button class="btn-outline" id="pullFromSheetBtn">
+                        <i class="fas fa-download"></i> Pull dari Google Sheets
+                    </button>
+                    <button class="btn-outline" id="testConnectionBtn">
+                        <i class="fas fa-plug"></i> Test Connection
+                    </button>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <h4><i class="fas fa-history"></i> Log Aktivitas</h4>
+                <div class="log-container" id="logContainer">
+                    <div class="log-entry">📋 Sistem siap digunakan</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== SETTINGS PAGE ===== -->
+        <div id="settingsPage" class="page">
+            <div class="settings-card">
+                <h3><i class="fas fa-key"></i> Konfigurasi API</h3>
+                <div class="form-group">
+                    <label>Google Apps Script URL</label>
+                    <input type="text" id="apiUrl" class="settings-input"
+                           value="https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec">
+                    <small>URL Web App dari Google Apps Script</small>
+                </div>
+                <button class="btn-primary" id="saveApiConfig">
+                    <i class="fas fa-save"></i> Simpan Konfigurasi
+                </button>
+            </div>
+
+            <div class="settings-card">
+                <h3><i class="fas fa-user-lock"></i> Ubah Password</h3>
+                <div class="form-group">
+                    <label>Password Lama</label>
+                    <input type="password" id="oldPassword" class="settings-input" placeholder="Masukkan password lama">
+                </div>
+                <div class="form-group">
+                    <label>Password Baru</label>
+                    <input type="password" id="newPassword" class="settings-input" placeholder="Masukkan password baru">
+                </div>
+                <div class="form-group">
+                    <label>Konfirmasi Password Baru</label>
+                    <input type="password" id="confirmPassword" class="settings-input" placeholder="Konfirmasi password baru">
+                </div>
+                <button class="btn-primary" id="changePasswordBtn">
+                    <i class="fas fa-key"></i> Ubah Password
+                </button>
+            </div>
+
+            <div class="settings-card">
+                <h3><i class="fas fa-database"></i> Manajemen Data</h3>
+                <button class="btn-danger" id="resetDataBtn">
+                    <i class="fas fa-trash-alt"></i> Reset Data Kosong
+                </button>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ===== MODAL TAMBAH/EDIT TITIK ===== -->
+<div id="pointModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 id="modalTitle"><i class="fas fa-map-marker-alt"></i> Tambah / Edit Titik</h3>
+            <button class="modal-close" onclick="closeModal()"><i class="fas fa-xmark"></i></button>
+        </div>
+        <form id="pointForm">
+            <input type="hidden" id="editId">
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-tree"></i> Dusun *</label>
+                    <input type="text" id="dusun" required placeholder="Contoh: Dk. Ngrowo">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-village"></i> Desa *</label>
+                    <input type="text" id="desa" required placeholder="Contoh: Kedewan">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-map"></i> Kecamatan</label>
+                    <select id="kec">
+                        <option value="Kedewan">Kedewan</option>
+                        <option value="Kasiman">Kasiman</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-signal"></i> Status Sinyal</label>
+                    <select id="status">
+                        <option value="blank">🔴 Blank Spot</option>
+                        <option value="lemah">🟡 Sinyal Lemah</option>
+                        <option value="sedang">🟠 Sinyal Sedang</option>
+                        <option value="baik">🟢 Sinyal Baik</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-arrow-up"></i> Latitude</label>
+                    <input type="number" step="any" id="lat" required placeholder="-7.105">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-arrow-right"></i> Longitude</label>
+                    <input type="number" step="any" id="lng" required placeholder="111.630">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-users"></i> Populasi (jiwa)</label>
+                    <input type="number" id="populasi" value="0">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-tower-cell"></i> Provider</label>
+                    <input type="text" id="provider" placeholder="Telkomsel/XL/Indosat">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label><i class="fas fa-ruler-combined"></i> Luas (ha)</label>
+                    <input type="text" id="luas" placeholder="Contoh: 2.1 ha">
+                </div>
+                <div class="form-group">
+                    <label><i class="fas fa-mountain"></i> Elevasi (mdpl)</label>
+                    <input type="number" id="elev" value="0">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label><i class="fas fa-note-sticky"></i> Keterangan</label>
+                <input type="text" id="ket" placeholder="Contoh: Tertutup bukit, blank spot">
+            </div>
+            <div class="modal-buttons">
+                <button type="button" class="btn-outline" onclick="closeModal()">Batal</button>
+                <button type="submit" class="btn-primary">Simpan</button>
+            </div>
+        </form>
     </div>
-  </div>
-
-  <!-- MODAL FORM -->
-  <div id="pointModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modalTitle">Tambah / Edit Titik</h3>
-        <button class="modal-close" id="closeModalBtn">&times;</button>
-      </div>
-      <form id="pointForm">
-        <input type="hidden" id="editId">
-        <div class="form-row">
-          <div class="form-group"><label>Dusun *</label><input type="text" id="dusun" required placeholder="Contoh: Dk. Ngrowo"></div>
-          <div class="form-group"><label>Desa *</label><input type="text" id="desa" required placeholder="Contoh: Kedewan"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Kecamatan</label><select id="kec"><option value="Kedewan">Kedewan</option><option value="Kasiman">Kasiman</option></select></div>
-          <div class="form-group"><label>Status Sinyal</label><select id="status"><option value="blank">Blank Spot</option><option value="lemah">Sinyal Lemah</option><option value="sedang">Sinyal Sedang</option><option value="baik">Sinyal Baik</option></select></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Latitude</label><input type="number" step="any" id="lat" required placeholder="-7.105"></div>
-          <div class="form-group"><label>Longitude</label><input type="number" step="any" id="lng" required placeholder="111.630"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Populasi (jiwa)</label><input type="number" id="populasi" value="0"></div>
-          <div class="form-group"><label>Provider</label><input type="text" id="provider" placeholder="Telkomsel/XL/Indosat"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Luas (ha)</label><input type="text" id="luas" placeholder="Contoh: 2.1 ha"></div>
-          <div class="form-group"><label>Elevasi (mdpl)</label><input type="number" id="elev" value="0"></div>
-        </div>
-        <div class="form-group"><label>Keterangan</label><input type="text" id="ket" placeholder="Contoh: Tertutup bukit, blank spot"></div>
-        <div class="modal-buttons">
-          <button type="button" class="btn-outline" id="cancelModalBtn">Batal</button>
-          <button type="submit" class="btn-primary">Simpan</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </div>
 
 <script src="admin.js"></script>
