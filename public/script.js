@@ -2,7 +2,7 @@
 // USER VIEW - GOOGLE SHEETS LIVE DATA (FIXED)
 // ============================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbzj2DbZa8ugSEifHlveHbRljZkEJYXIQfM1OjnBWDsuxKJxMmPLyM_-ITuUJqdwKMrPXw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbyGjb48JJ6arB3heX5SfMMv77G6Zz7uLi-dCKhrPMlvc7hvveT8qyQ0BcjWGmUSxc5qRA/exec';
 
 let map, markerCluster, pointsData = [], filteredData = [];
 let currentLayer = 'satellite', layers = {};
