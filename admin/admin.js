@@ -1,11 +1,9 @@
 // ============================================
-// ADMIN PANEL - GOOGLE SHEETS SYNC (FULL VERSION)
+// ADMIN PANEL - GOOGLE SHEETS SYNC (FIXED VERSION)
 // ============================================
 
-// Konfigurasi - GANTI DENGAN URL APPS SCRIPT ANDA
 let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
 
-// Konfigurasi Login
 const ADMIN_CREDENTIALS = {
   username: 'admin',
   passwordHash: btoa('admin123')
@@ -33,7 +31,7 @@ function saveApiConfig() {
     API_URL = newUrl;
     localStorage.setItem('googleApiUrl', newUrl);
     showToast('Konfigurasi API disimpan', 'success');
-    addLog('🔧 URL API diupdate: ' + newUrl.substring(0, 50) + '...', 'info');
+    addLog('🔧 URL API diupdate', 'info');
   }
 }
 
@@ -65,13 +63,10 @@ function addLog(message, type = 'info') {
 function saveToLocalStorage() {
   localStorage.setItem('sigAdminPoints', JSON.stringify(pointsData));
   if (lastSyncTime) localStorage.setItem('lastSyncTime', lastSyncTime.toISOString());
-  console.log('Data saved to localStorage:', pointsData.length, 'items');
 }
 
 function loadFromLocalStorage() {
   const stored = localStorage.getItem('sigAdminPoints');
-  console.log('Loading from localStorage...');
-  
   if (stored && stored !== '[]') {
     pointsData = JSON.parse(stored);
     addLog(`📂 Memuat ${pointsData.length} data dari localStorage`, 'info');
@@ -83,7 +78,6 @@ function loadFromLocalStorage() {
   const savedSync = localStorage.getItem('lastSyncTime');
   if (savedSync) lastSyncTime = new Date(savedSync);
   updateSyncStatus();
-  
   renderAll();
 }
 
@@ -97,8 +91,6 @@ function updateSyncStatus() {
 
 // ========== RENDER FUNCTIONS ==========
 function renderStats() {
-  console.log('renderStats dipanggil, total data:', pointsData.length);
-  
   const blank = pointsData.filter(p => p.status === 'blank').length;
   const lemah = pointsData.filter(p => p.status === 'lemah').length;
   const sedang = pointsData.filter(p => p.status === 'sedang').length;
@@ -106,10 +98,7 @@ function renderStats() {
   const total = pointsData.length;
   
   const statGrid = document.getElementById('statGrid');
-  if (!statGrid) {
-    console.error('Element statGrid tidak ditemukan!');
-    return;
-  }
+  if (!statGrid) return;
   
   if (total === 0) {
     statGrid.innerHTML = `
@@ -140,10 +129,7 @@ function renderTable() {
   );
   
   const tbody = document.getElementById('tableBody');
-  if (!tbody) {
-    console.error('Element tableBody tidak ditemukan!');
-    return;
-  }
+  if (!tbody) return;
   
   if (filtered.length === 0) {
     tbody.innerHTML = `
@@ -180,10 +166,8 @@ function renderTable() {
 }
 
 function renderAll() {
-  console.log('===== RENDERALL DIPANGGIL =====');
   renderStats();
   renderTable();
-  console.log('===== RENDERALL SELESAI =====');
 }
 
 // ========== DATA MANAGEMENT ==========
@@ -283,6 +267,8 @@ function addPoint(pointData) {
   addLog(`➕ Menambahkan titik: ${newPoint.dusun} (ID: ${newId})`, 'success');
   showToast(`Titik "${newPoint.dusun}" berhasil ditambahkan`, 'success');
   
+  // Auto sync ke Google Sheets
+  syncSinglePointToSheet(newPoint, 'add');
   return newPoint;
 }
 
@@ -314,17 +300,23 @@ function updatePoint(id, updatedData) {
     renderAll();
     addLog(`✏️ Update titik: ${updatedData.dusun} (ID: ${id})`, 'info');
     showToast(`Titik "${updatedData.dusun}" berhasil diperbarui`, 'success');
+    
+    // Auto sync ke Google Sheets
+    syncSinglePointToSheet(pointsData[index], 'update');
   }
 }
 
-function deletePoint(id) {
-  if (confirm('Hapus titik ini?')) {
+async function deletePoint(id) {
+  if (confirm('Hapus titik ini? Data akan dihapus dari Google Sheets juga.')) {
     const point = pointsData.find(p => p.id === id);
     pointsData = pointsData.filter(p => p.id !== id);
     saveToLocalStorage();
     renderAll();
     addLog(`🗑️ Hapus titik: ${point?.dusun} (ID: ${id})`, 'warning');
     showToast(`Titik "${point?.dusun}" berhasil dihapus`, 'success');
+    
+    // Sync delete ke Google Sheets
+    await syncDeleteToSheet(id);
   }
 }
 
@@ -339,20 +331,71 @@ function resetToDefault() {
 }
 
 // ========== GOOGLE SHEETS API FUNCTIONS ==========
+
+// Sync single point ke Google Sheets
+async function syncSinglePointToSheet(point, action) {
+  try {
+    const formData = new URLSearchParams();
+    formData.append('action', action);
+    formData.append('data', JSON.stringify(point));
+    formData.append('id', point.id.toString());
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        addLog(`✅ Sync ${action}: ${point.dusun} berhasil`, 'success');
+      } else {
+        addLog(`❌ Sync ${action} gagal: ${result.error}`, 'error');
+      }
+    }
+  } catch (error) {
+    addLog(`❌ Error sync ${action}: ${error.message}`, 'error');
+  }
+}
+
+// Sync delete ke Google Sheets
+async function syncDeleteToSheet(id) {
+  try {
+    const formData = new URLSearchParams();
+    formData.append('action', 'delete');
+    formData.append('id', id.toString());
+    
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: formData.toString()
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        addLog(`✅ Delete ID ${id} berhasil dari Google Sheets`, 'success');
+      }
+    }
+  } catch (error) {
+    addLog(`❌ Error delete: ${error.message}`, 'error');
+  }
+}
+
+// Test koneksi
 async function testConnection() {
   addLog('🔌 Menguji koneksi ke Google Sheets...', 'info');
   showToast('Menguji koneksi...', 'info');
   
   try {
     const url = `${API_URL}?action=test&t=${Date.now()}`;
-    addLog(`📡 Mengirim request ke: ${API_URL.substring(0, 50)}...`, 'info');
-    
     const response = await fetch(url, { method: 'GET', mode: 'cors' });
     
     if (response.ok) {
       const result = await response.json();
-      addLog(`✅ Response: ${JSON.stringify(result)}`, 'success');
-      
       if (result.success) {
         addLog('✅ Koneksi berhasil!', 'success');
         showToast('Koneksi berhasil', 'success');
@@ -372,18 +415,11 @@ async function testConnection() {
   } catch (error) {
     addLog(`❌ Koneksi gagal: ${error.message}`, 'error');
     showToast('Koneksi gagal: ' + error.message, 'error');
-    
-    const apiStatus = document.getElementById('apiStatus');
-    if (apiStatus) {
-      apiStatus.className = 'status-badge';
-      apiStatus.style.background = '#FEE2E2';
-      apiStatus.style.color = '#DC2626';
-      apiStatus.innerHTML = 'Gagal Terhubung';
-    }
     return false;
   }
 }
 
+// Pull data dari Google Sheets
 async function fetchDataFromSheets() {
   addLog('📥 Mengambil data dari Google Sheets...', 'info');
   showToast('Mengambil data dari Google Sheets...', 'info');
@@ -396,8 +432,8 @@ async function fetchDataFromSheets() {
     
     const result = await response.json();
     
-    if (result.success && result.data && result.data.length > 0) {
-      pointsData = result.data.map(item => ({
+    if (result.success && result.data) {
+      const newData = result.data.map(item => ({
         id: parseInt(item.id) || Date.now(),
         kec: item.kec || '',
         desa: item.desa || '',
@@ -413,27 +449,39 @@ async function fetchDataFromSheets() {
         ket: item.ket || ''
       }));
       
+      // Merge data: update yang ada, tambah yang baru
+      const existingIds = new Set(pointsData.map(p => p.id));
+      const mergedData = [...pointsData];
+      
+      for (const newPoint of newData) {
+        const existingIndex = mergedData.findIndex(p => p.id === newPoint.id);
+        if (existingIndex !== -1) {
+          mergedData[existingIndex] = newPoint;
+        } else if (!existingIds.has(newPoint.id)) {
+          mergedData.push(newPoint);
+        }
+      }
+      
+      pointsData = mergedData;
       saveToLocalStorage();
       lastSyncTime = new Date();
       updateSyncStatus();
       renderAll();
-      addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
-      showToast(`Berhasil mengambil ${pointsData.length} data`, 'success');
+      addLog(`✅ Berhasil mengambil ${newData.length} data dari Google Sheets`, 'success');
+      showToast(`Berhasil mengambil ${newData.length} data`, 'success');
     } else {
       addLog('📭 Data kosong dari Google Sheets', 'info');
-      pointsData = [];
-      renderAll();
     }
     return pointsData;
   } catch (error) {
     addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
     showToast('Gagal mengambil data: ' + error.message, 'error');
-    loadFromLocalStorage();
     return pointsData;
   }
 }
 
-async function pushToSheets() {
+// Push semua data ke Google Sheets (sync penuh)
+async function fullSyncToSheets() {
   if (isSyncing) {
     showToast('Sinkronisasi sedang berjalan...', 'warning');
     return;
@@ -446,17 +494,17 @@ async function pushToSheets() {
   }
   
   isSyncing = true;
-  const pushBtn = document.getElementById('pushToSheetBtn');
-  if (pushBtn) {
-    pushBtn.disabled = true;
-    pushBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyinkronkan...';
+  const syncBtn = document.getElementById('fullSyncBtn');
+  if (syncBtn) {
+    syncBtn.disabled = true;
+    syncBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyinkronkan...';
   }
   
   let successCount = 0;
   let errorCount = 0;
   
   try {
-    addLog(`📤 Mulai sinkronisasi ${pointsData.length} data...`, 'info');
+    addLog(`📤 Memulai sinkronisasi penuh ${pointsData.length} data...`, 'info');
     
     for (let i = 0; i < pointsData.length; i++) {
       const point = pointsData[i];
@@ -464,8 +512,9 @@ async function pushToSheets() {
       
       try {
         const formData = new URLSearchParams();
-        formData.append('action', 'add');
+        formData.append('action', 'sync');
         formData.append('data', JSON.stringify(point));
+        formData.append('id', point.id.toString());
         
         const response = await fetch(API_URL, {
           method: 'POST',
@@ -488,7 +537,7 @@ async function pushToSheets() {
           addLog(`❌ [${i+1}/${pointsData.length}] HTTP ${response.status}`, 'error');
         }
         
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise(resolve => setTimeout(resolve, 200));
         
       } catch (error) {
         errorCount++;
@@ -509,9 +558,9 @@ async function pushToSheets() {
     showToast('Error: ' + error.message, 'error');
   } finally {
     isSyncing = false;
-    if (pushBtn) {
-      pushBtn.disabled = false;
-      pushBtn.innerHTML = '<i class="fas fa-upload"></i> Push ke Google Sheets';
+    if (syncBtn) {
+      syncBtn.disabled = false;
+      syncBtn.innerHTML = '<i class="fas fa-sync-alt"></i> Sinkronisasi Penuh';
     }
   }
 }
@@ -694,10 +743,10 @@ function initEventListeners() {
   
   // Sync Buttons
   const syncNowBtn = document.getElementById('syncNowBtn');
-  if (syncNowBtn) syncNowBtn.addEventListener('click', pushToSheets);
+  if (syncNowBtn) syncNowBtn.addEventListener('click', fullSyncToSheets);
   
   const pushToSheetBtn = document.getElementById('pushToSheetBtn');
-  if (pushToSheetBtn) pushToSheetBtn.addEventListener('click', pushToSheets);
+  if (pushToSheetBtn) pushToSheetBtn.addEventListener('click', fullSyncToSheets);
   
   const pullFromSheetBtn = document.getElementById('pullFromSheetBtn');
   if (pullFromSheetBtn) pullFromSheetBtn.addEventListener('click', fetchDataFromSheets);
@@ -716,6 +765,9 @@ function initEventListeners() {
   
   const addSampleDataBtn = document.getElementById('addSampleDataBtn');
   if (addSampleDataBtn) addSampleDataBtn.addEventListener('click', addSampleData);
+  
+  const fullSyncBtn = document.getElementById('fullSyncBtn');
+  if (fullSyncBtn) fullSyncBtn.addEventListener('click', fullSyncToSheets);
   
   const changePasswordBtn = document.getElementById('changePasswordBtn');
   if (changePasswordBtn) {
