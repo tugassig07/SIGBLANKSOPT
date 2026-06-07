@@ -3,7 +3,7 @@
 // USING GET METHOD FOR STABILITY
 // ============================================
 
-let API_URL = 'https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec';
+let API_URL = 'https://script.google.com/macros/s/AKfycbyGjb48JJ6arB3heX5SfMMv77G6Zz7uLi-dCKhrPMlvc7hvveT8qyQ0BcjWGmUSxc5qRA/exec';
 let pointsData = [];
 let isLoading = false;
 
