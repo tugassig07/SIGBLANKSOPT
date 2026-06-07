@@ -15,6 +15,11 @@
 <body>
 
 <div class="app">
+  <!-- Back to Home Button -->
+  <a href="../" class="back-home-btn" title="Kembali ke Beranda">
+    <i class="fas fa-arrow-left"></i> Kembali
+  </a>
+
   <div class="data-status-bar" id="dataStatusBar">
     <div class="status-indicator"><div class="status-dot" id="statusDot"></div><span id="statusText">Memuat data...</span></div>
     <div class="last-update" id="lastUpdate">-</div>
@@ -250,41 +255,10 @@
   <div class="glass-panel" id="panel-layers" style="display:none">
     <div class="glass-panel-header"><h3>Filter & Layer</h3><button class="glass-close" onclick="togglePanel('layers')">&times;</button></div>
     <div class="glass-panel-body">
-      <div class="filter-section">
-        <label class="filter-title">Kecamatan</label>
-        <div class="chip-group">
-          <button class="chip active" onclick="setFilterKec('all', this)">Semua</button>
-          <button class="chip" onclick="setFilterKec('Kedewan', this)">Kedewan</button>
-          <button class="chip" onclick="setFilterKec('Kasiman', this)">Kasiman</button>
-        </div>
-      </div>
-      <div class="filter-section">
-        <label class="filter-title">Status Sinyal</label>
-        <div class="chip-group">
-          <button class="chip active" onclick="setFilterStatus('all', this)">Semua</button>
-          <button class="chip chip-danger" onclick="setFilterStatus('blank', this)">🔴 Blank</button>
-          <button class="chip chip-warning" onclick="setFilterStatus('lemah', this)">🟡 Lemah</button>
-          <button class="chip" onclick="setFilterStatus('sedang', this)">🟠 Sedang</button>
-          <button class="chip chip-success" onclick="setFilterStatus('baik', this)">🟢 Baik</button>
-        </div>
-      </div>
-      <div class="filter-section">
-        <label class="filter-title">Legenda</label>
-        <div class="legend-list">
-          <div class="legend-row" onclick="setFilterStatus('blank')"><div class="legend-dot" style="background:var(--danger)"></div><span class="legend-name">Blank Spot</span><span class="legend-count" id="cnt-blank">0</span></div>
-          <div class="legend-row" onclick="setFilterStatus('lemah')"><div class="legend-dot" style="background:var(--warning)"></div><span class="legend-name">Sinyal Lemah</span><span class="legend-count" id="cnt-lemah">0</span></div>
-          <div class="legend-row" onclick="setFilterStatus('sedang')"><div class="legend-dot" style="background:var(--orange)"></div><span class="legend-name">Sinyal Sedang</span><span class="legend-count" id="cnt-sedang">0</span></div>
-          <div class="legend-row" onclick="setFilterStatus('baik')"><div class="legend-dot" style="background:var(--success)"></div><span class="legend-name">Sinyal Baik</span><span class="legend-count" id="cnt-baik">0</span></div>
-        </div>
-      </div>
-      <div class="filter-section">
-        <button class="reset-filter-btn" onclick="resetFilters()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M3 12a9 9 0 1 0 9-9m-4 4L3 3m0 4V3h4"/>
-          </svg>
-          Reset Semua Filter
-        </button>
-      </div>
+      <div class="filter-section"><label class="filter-title">Kecamatan</label><div class="chip-group"><button class="chip active" onclick="setFilterKec('all', this)">Semua</button><button class="chip" onclick="setFilterKec('Kedewan', this)">Kedewan</button><button class="chip" onclick="setFilterKec('Kasiman', this)">Kasiman</button></div></div>
+      <div class="filter-section"><label class="filter-title">Status Sinyal</label><div class="chip-group"><button class="chip active" onclick="setFilterStatus('all', this)">Semua</button><button class="chip chip-danger" onclick="setFilterStatus('blank', this)">🔴 Blank</button><button class="chip chip-warning" onclick="setFilterStatus('lemah', this)">🟡 Lemah</button><button class="chip" onclick="setFilterStatus('sedang', this)">🟠 Sedang</button><button class="chip chip-success" onclick="setFilterStatus('baik', this)">🟢 Baik</button></div></div>
+      <div class="filter-section"><label class="filter-title">Legenda</label><div class="legend-list"><div class="legend-row" onclick="setFilterStatus('blank')"><div class="legend-dot" style="background:var(--danger)"></div><span class="legend-name">Blank Spot</span><span class="legend-count" id="cnt-blank">0</span></div><div class="legend-row" onclick="setFilterStatus('lemah')"><div class="legend-dot" style="background:var(--warning)"></div><span class="legend-name">Sinyal Lemah</span><span class="legend-count" id="cnt-lemah">0</span></div><div class="legend-row" onclick="setFilterStatus('sedang')"><div class="legend-dot" style="background:var(--orange)"></div><span class="legend-name">Sinyal Sedang</span><span class="legend-count" id="cnt-sedang">0</span></div><div class="legend-row" onclick="setFilterStatus('baik')"><div class="legend-dot" style="background:var(--success)"></div><span class="legend-name">Sinyal Baik</span><span class="legend-count" id="cnt-baik">0</span></div></div></div>
+      <div class="filter-section"><button class="reset-filter-btn" onclick="resetFilters()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12a9 9 0 1 0 9-9m-4 4L3 3m0 4V3h4"/></svg> Reset Semua Filter</button></div>
     </div>
   </div>
 
@@ -292,64 +266,15 @@
     <div class="glass-panel-header"><h3>Statistik Wilayah 2026</h3><button class="glass-close" onclick="togglePanel('stats')">&times;</button></div>
     <div class="glass-panel-body">
       <div class="donut-section">
-        <div class="donut-chart">
-          <svg viewBox="0 0 100 100" class="donut-svg">
-            <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="10"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--danger)" stroke-width="10" stroke-dasharray="0 251" id="donutBlank"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--warning)" stroke-width="10" stroke-dasharray="0 251" id="donutLemah"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--orange)" stroke-width="10" stroke-dasharray="0 251" id="donutSedang"/>
-            <circle cx="50" cy="50" r="40" fill="none" stroke="var(--success)" stroke-width="10" stroke-dasharray="0 251" id="donutBaik"/>
-          </svg>
-          <div class="donut-center">
-            <div class="donut-val" id="h-total">0</div>
-            <div class="donut-lbl">Total Titik</div>
-          </div>
-        </div>
-        <div class="donut-legend">
-          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--danger)"></div><span>Blank Spot</span><span id="dl-blank">0</span></div>
-          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--warning)"></div><span>Sinyal Lemah</span><span id="dl-lemah">0</span></div>
-          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--orange)"></div><span>Sinyal Sedang</span><span id="dl-sedang">0</span></div>
-          <div class="donut-legend-item"><div class="dl-dot" style="background:var(--success)"></div><span>Sinyal Baik</span><span id="dl-baik">0</span></div>
-        </div>
+        <div class="donut-chart"><svg viewBox="0 0 100 100" class="donut-svg"><circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="10"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--danger)" stroke-width="10" stroke-dasharray="0 251" id="donutBlank"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--warning)" stroke-width="10" stroke-dasharray="0 251" id="donutLemah"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--orange)" stroke-width="10" stroke-dasharray="0 251" id="donutSedang"/><circle cx="50" cy="50" r="40" fill="none" stroke="var(--success)" stroke-width="10" stroke-dasharray="0 251" id="donutBaik"/></svg><div class="donut-center"><div class="donut-val" id="h-total">0</div><div class="donut-lbl">Total Titik</div></div></div>
+        <div class="donut-legend"><div class="donut-legend-item"><div class="dl-dot" style="background:var(--danger)"></div><span>Blank Spot</span><span id="dl-blank">0</span></div><div class="donut-legend-item"><div class="dl-dot" style="background:var(--warning)"></div><span>Sinyal Lemah</span><span id="dl-lemah">0</span></div><div class="donut-legend-item"><div class="dl-dot" style="background:var(--orange)"></div><span>Sinyal Sedang</span><span id="dl-sedang">0</span></div><div class="donut-legend-item"><div class="dl-dot" style="background:var(--success)"></div><span>Sinyal Baik</span><span id="dl-baik">0</span></div></div>
       </div>
-      <div class="stat-cards-grid">
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon" style="background:rgba(0,170,255,0.15);color:#00AAFF">📍</div>
-          <div class="stat-mini-info">
-            <div class="stat-mini-val" id="s-kedewan-blank">0</div>
-            <div class="stat-mini-lbl">Kedewan Blank Spot</div>
-          </div>
-        </div>
-        <div class="stat-mini-card">
-          <div class="stat-mini-icon" style="background:rgba(255,107,53,0.15);color:#FF6B35">📍</div>
-          <div class="stat-mini-info">
-            <div class="stat-mini-val" id="s-kasiman-blank">0</div>
-            <div class="stat-mini-lbl">Kasiman Blank Spot</div>
-          </div>
-        </div>
-      </div>
-      <div class="chart-section">
-        <div class="chart-header">
-          <span>📊 Cakupan per Desa</span>
-          <span class="chart-total" id="desaCount">0 Desa</span>
-        </div>
-        <div class="chart-bars" id="miniChart">
-          <div style="text-align: center; padding: 40px; color: var(--text3);">
-            <i class="fas fa-chart-bar" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-            Belum ada data
-          </div>
-        </div>
-      </div>
+      <div class="stat-cards-grid"><div class="stat-mini-card"><div class="stat-mini-icon" style="background:rgba(0,170,255,0.15);color:#00AAFF">📍</div><div class="stat-mini-info"><div class="stat-mini-val" id="s-kedewan-blank">0</div><div class="stat-mini-lbl">Kedewan Blank Spot</div></div></div><div class="stat-mini-card"><div class="stat-mini-icon" style="background:rgba(255,107,53,0.15);color:#FF6B35">📍</div><div class="stat-mini-info"><div class="stat-mini-val" id="s-kasiman-blank">0</div><div class="stat-mini-lbl">Kasiman Blank Spot</div></div></div></div>
+      <div class="chart-section"><div class="chart-header"><span>📊 Cakupan per Desa</span><span class="chart-total" id="desaCount">0 Desa</span></div><div class="chart-bars" id="miniChart"></div></div>
     </div>
   </div>
 
-  <div class="bottom-sheet" id="bottomSheet">
-    <div class="bottom-sheet-handle"></div>
-    <div class="bottom-sheet-content">
-      <div class="bottom-sheet-title">Informasi Titik</div>
-      <div class="bottom-sheet-body" id="bottomSheetBody"></div>
-    </div>
-  </div>
+  <div class="bottom-sheet" id="bottomSheet"><div class="bottom-sheet-handle"></div><div class="bottom-sheet-content"><div class="bottom-sheet-title">Informasi Titik</div><div class="bottom-sheet-body" id="bottomSheetBody"></div></div></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
