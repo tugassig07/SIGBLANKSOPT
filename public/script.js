@@ -1,6 +1,5 @@
 // ============================================
 // USER VIEW - GOOGLE SHEETS LIVE DATA
-// DATA KOSONG (SELARAS DENGAN ADMIN)
 // ============================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec';
@@ -36,37 +35,12 @@ function updateStatusBar(status, message) {
   else { dot.classList.add('error'); text.innerHTML = '✗ ' + message; }
 }
 
-function showEmptyMapMessage() {
-  const mapContainer = document.getElementById('map');
-  if (mapContainer && pointsData.length === 0) {
-    // Remove existing empty message if any
-    const existingMsg = document.querySelector('.empty-map-state');
-    if (existingMsg) existingMsg.remove();
-    
-    const emptyMsg = document.createElement('div');
-    emptyMsg.className = 'empty-map-state';
-    emptyMsg.innerHTML = `
-      <div class="empty-map-icon">🗺️</div>
-      <div class="empty-map-title">Belum Ada Data Titik</div>
-      <div class="empty-map-desc">Admin belum menambahkan data blank spot.<br>Silakan cek kembali nanti.</div>
-    `;
-    mapContainer.appendChild(emptyMsg);
-  } else {
-    const existingMsg = document.querySelector('.empty-map-state');
-    if (existingMsg) existingMsg.remove();
-  }
-}
-
 async function fetchDataFromSheets() {
   const overlay = document.getElementById('loadingOverlay');
   const progressBar = document.getElementById('loadingProgressBar');
   if (overlay) overlay.style.display = 'flex';
   let progress = 0;
-  const interval = setInterval(() => { 
-    progress += 10; 
-    if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%'; 
-    if (progress >= 90) clearInterval(interval); 
-  }, 100);
+  const interval = setInterval(() => { progress += 10; if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%'; if (progress >= 90) clearInterval(interval); }, 100);
   
   try {
     updateStatusBar('loading', 'Mengambil data...');
@@ -95,7 +69,6 @@ async function fetchDataFromSheets() {
       updateUI();
       renderMarkers([]);
       updateStatusBar('warning', 'Belum ada data (kosong)');
-      showToast('Belum ada data titik dari Google Sheets', 'info');
     }
     
     const lastUpdateSpan = document.getElementById('lastUpdate');
@@ -103,10 +76,7 @@ async function fetchDataFromSheets() {
     if (lastUpdateSpan) lastUpdateSpan.textContent = `Update: ${new Date().toLocaleTimeString()}`;
     if (badgeLastSync) badgeLastSync.textContent = lastSyncTime ? lastSyncTime.toLocaleTimeString() : '-';
     
-    showEmptyMapMessage();
-    
   } catch (error) {
-    console.error('Error:', error);
     const cached = localStorage.getItem('cachedData');
     if (cached && JSON.parse(cached).length > 0) {
       pointsData = JSON.parse(cached);
@@ -121,9 +91,7 @@ async function fetchDataFromSheets() {
       updateUI();
       renderMarkers([]);
       updateStatusBar('error', 'Gagal mengambil data');
-      showToast('Gagal mengambil data dari server', 'error');
     }
-    showEmptyMapMessage();
   } finally {
     setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 500);
   }
@@ -146,17 +114,13 @@ function popupContent(d) {
 function renderMarkers(data) {
   if (!markerCluster) return;
   markerCluster.clearLayers();
-  if (!data || data.length === 0) {
-    showEmptyMapMessage();
-    return;
-  }
+  if (!data || data.length === 0) return;
   data.forEach(d => {
     const m = L.marker([d.lat, d.lng], { icon: makeIcon(d.status, d.kec) })
       .bindPopup(popupContent(d), { maxWidth: 280, className: 'glass-popup' })
       .bindTooltip(`<strong>${d.dusun}</strong><br><span style="color:${colorMap[d.status]}">● ${labelMap[d.status]}</span>`, { direction: 'top', offset: [0, -20], className: 'custom-tooltip', sticky: true });
     markerCluster.addLayer(m);
   });
-  showEmptyMapMessage();
 }
 
 function updateStats(data) {
@@ -172,10 +136,7 @@ function updateStats(data) {
     'dl-blank': blank, 'dl-lemah': lemah, 'dl-sedang': sedang, 'dl-baik': baik,
     'badgePoints': total + ' total'
   };
-  for (const [id, val] of Object.entries(elements)) { 
-    const el = document.getElementById(id); 
-    if (el) el.textContent = val; 
-  }
+  for (const [id, val] of Object.entries(elements)) { const el = document.getElementById(id); if (el) el.textContent = val; }
   
   const bars = document.querySelectorAll('.stat-float-fill');
   const pcts = total > 0 ? [blank/total*100, lemah/total*100, sedang/total*100, baik/total*100] : [0,0,0,0];
@@ -194,19 +155,11 @@ function updateDonut(data) {
   const sedang = data.filter(d => d.status === 'sedang').length;
   const baik = data.filter(d => d.status === 'baik').length;
   const circ = 251.2;
-  const blankLen = (blank / total) * circ;
-  const lemahLen = (lemah / total) * circ;
-  const sedangLen = (sedang / total) * circ;
-  const baikLen = (baik / total) * circ;
-  
-  const db = document.getElementById('donutBlank'); 
-  if (db) { db.style.strokeDasharray = `${blankLen} ${circ}`; db.style.strokeDashoffset = 0; }
-  const dl = document.getElementById('donutLemah'); 
-  if (dl) { dl.style.strokeDasharray = `${lemahLen} ${circ}`; dl.style.strokeDashoffset = -blankLen; }
-  const ds = document.getElementById('donutSedang'); 
-  if (ds) { ds.style.strokeDasharray = `${sedangLen} ${circ}`; ds.style.strokeDashoffset = -(blankLen + lemahLen); }
-  const dba = document.getElementById('donutBaik'); 
-  if (dba) { dba.style.strokeDasharray = `${baikLen} ${circ}`; dba.style.strokeDashoffset = -(blankLen + lemahLen + sedangLen); }
+  const blankLen = (blank / total) * circ, lemahLen = (lemah / total) * circ, sedangLen = (sedang / total) * circ, baikLen = (baik / total) * circ;
+  const db = document.getElementById('donutBlank'); if (db) { db.style.strokeDasharray = `${blankLen} ${circ}`; db.style.strokeDashoffset = 0; }
+  const dl = document.getElementById('donutLemah'); if (dl) { dl.style.strokeDasharray = `${lemahLen} ${circ}`; dl.style.strokeDashoffset = -blankLen; }
+  const ds = document.getElementById('donutSedang'); if (ds) { ds.style.strokeDasharray = `${sedangLen} ${circ}`; ds.style.strokeDashoffset = -(blankLen + lemahLen); }
+  const dba = document.getElementById('donutBaik'); if (dba) { dba.style.strokeDasharray = `${baikLen} ${circ}`; dba.style.strokeDashoffset = -(blankLen + lemahLen + sedangLen); }
 }
 
 function renderChart(data) {
@@ -215,13 +168,9 @@ function renderChart(data) {
   const desas = Object.keys(desaMap);
   const maxTotal = Math.max(...desas.map(k => desaMap[k].total), 1);
   const container = document.getElementById('miniChart');
-  
   if (container) {
     if (desas.length === 0) {
-      container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text3);">
-        <i class="fas fa-chart-bar" style="font-size: 32px; margin-bottom: 12px; display: block;"></i>
-        Belum ada data
-      </div>`;
+      container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text3);">Belum ada data</div>`;
     } else {
       container.innerHTML = desas.slice(0, 10).map(desa => {
         const d = desaMap[desa];
@@ -230,15 +179,10 @@ function renderChart(data) {
       }).join('');
     }
   }
-  const dc = document.getElementById('desaCount'); 
-  if (dc) dc.textContent = desas.length + ' Desa';
+  const dc = document.getElementById('desaCount'); if (dc) dc.textContent = desas.length + ' Desa';
 }
 
-function updateUI() { 
-  updateStats(pointsData); 
-  updateDonut(pointsData); 
-  renderChart(pointsData); 
-}
+function updateUI() { updateStats(pointsData); updateDonut(pointsData); renderChart(pointsData); }
 
 function filterData() {
   const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
@@ -252,55 +196,17 @@ function filterData() {
   updateStats(filteredData);
   updateDonut(filteredData);
   renderChart(filteredData);
-  const fs = document.getElementById('filterStats'); 
-  if (fs) fs.innerHTML = `Menampilkan ${filteredData.length} dari ${pointsData.length} titik`;
+  const fs = document.getElementById('filterStats'); if (fs) fs.innerHTML = `Menampilkan ${filteredData.length} dari ${pointsData.length} titik`;
 }
 
-function setFilterKec(kec, btn) { 
-  filterKec = kec; 
-  if (btn?.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); 
-  if (btn) btn.classList.add('active'); 
-  filterData(); 
-  showToast(`Filter: ${kec === 'all' ? 'Semua' : kec}`, 'info'); 
-}
-
-function setFilterStatus(status, btn) { 
-  filterStatus = status; 
-  if (btn?.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); 
-  if (btn) btn.classList.add('active'); 
-  filterData(); 
-  showToast(`Filter: ${status === 'all' ? 'Semua' : labelMap[status]}`, 'info'); 
-}
-
-function quickFilter(status) { 
-  const map = { blank: '.chip-danger', lemah: '.chip-warning', sedang: '.chip', baik: '.chip-success' }; 
-  const btn = document.querySelector(map[status]); 
-  if (btn) setFilterStatus(status, btn); 
-}
-
-function resetFilters() { 
-  filterKec = 'all'; 
-  filterStatus = 'all'; 
-  const search = document.getElementById('searchInput'); 
-  if (search) search.value = ''; 
-  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); 
-  const firstChips = document.querySelectorAll('.chip'); 
-  if (firstChips[0]) firstChips[0].classList.add('active'); 
-  if (firstChips[4]) firstChips[4].classList.add('active'); 
-  filterData(); 
-  showToast('Filter direset', 'success'); 
-}
-
-function debouncedFilter() { 
-  if (searchTimeout) clearTimeout(searchTimeout); 
-  searchTimeout = setTimeout(() => filterData(), 300); 
-}
+function setFilterKec(kec, btn) { filterKec = kec; if (btn?.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); if (btn) btn.classList.add('active'); filterData(); showToast(`Filter: ${kec === 'all' ? 'Semua' : kec}`, 'info'); }
+function setFilterStatus(status, btn) { filterStatus = status; if (btn?.parentElement) btn.parentElement.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); if (btn) btn.classList.add('active'); filterData(); showToast(`Filter: ${status === 'all' ? 'Semua' : labelMap[status]}`, 'info'); }
+function quickFilter(status) { const map = { blank: '.chip-danger', lemah: '.chip-warning', sedang: '.chip', baik: '.chip-success' }; const btn = document.querySelector(map[status]); if (btn) setFilterStatus(status, btn); }
+function resetFilters() { filterKec = 'all'; filterStatus = 'all'; const search = document.getElementById('searchInput'); if (search) search.value = ''; document.querySelectorAll('.chip').forEach(c => c.classList.remove('active')); const firstChips = document.querySelectorAll('.chip'); if (firstChips[0]) firstChips[0].classList.add('active'); if (firstChips[4]) firstChips[4].classList.add('active'); filterData(); showToast('Filter direset', 'success'); }
+function debouncedFilter() { if (searchTimeout) clearTimeout(searchTimeout); searchTimeout = setTimeout(() => filterData(), 300); }
 
 function toggleHeatmap(btn) {
-  if (pointsData.length === 0) {
-    showToast('Tidak ada data untuk heatmap', 'warning');
-    return;
-  }
+  if (pointsData.length === 0) { showToast('Tidak ada data untuk heatmap', 'warning'); return; }
   heatActive = !heatActive;
   if (btn) btn.classList.toggle('active');
   if (heatActive && map) {
@@ -308,15 +214,8 @@ function toggleHeatmap(btn) {
     if (heatPoints.length > 0) {
       heatLayer = L.heatLayer(heatPoints, { radius: 35, blur: 20, maxZoom: 15, minOpacity: 0.3, gradient: { 0.4: '#FFD700', 0.6: '#FF8C00', 0.8: '#FF3B5C' } }).addTo(map);
       showToast('Heatmap aktif', 'info');
-    } else {
-      showToast('Tidak ada titik blank/lemah untuk heatmap', 'warning');
-      heatActive = false;
-      if (btn) btn.classList.remove('active');
-    }
-  } else if (heatLayer && map) { 
-    map.removeLayer(heatLayer); 
-    showToast('Heatmap nonaktif', 'info'); 
-  }
+    } else { showToast('Tidak ada titik blank/lemah', 'warning'); heatActive = false; if (btn) btn.classList.remove('active'); }
+  } else if (heatLayer && map) { map.removeLayer(heatLayer); showToast('Heatmap nonaktif', 'info'); }
 }
 
 function setLayer(name, btn) {
@@ -330,7 +229,6 @@ function setLayer(name, btn) {
 }
 
 function resetView() { if (map) { map.setView([-7.090, 111.650], 12); showToast('Tampilan direset', 'info'); } }
-
 function locateUser() { 
   if (!navigator.geolocation) { showToast('Geolokasi tidak didukung', 'error'); return; } 
   showToast('Mendapatkan lokasi...', 'info'); 
@@ -344,25 +242,19 @@ function locateUser() {
     showToast('Lokasi ditemukan', 'success'); 
   }, () => showToast('Gagal mendapatkan lokasi', 'error')); 
 }
-
 function toggleDarkMode() { 
   isDarkMode = !isDarkMode; 
   const root = document.documentElement; 
   if (isDarkMode) { 
-    root.style.setProperty('--bg', '#0B0F19'); 
-    root.style.setProperty('--bg2', '#111827'); 
-    root.style.setProperty('--text', '#F0F4F8'); 
-    root.style.setProperty('--text2', '#94A3B8'); 
+    root.style.setProperty('--bg', '#0B0F19'); root.style.setProperty('--bg2', '#111827'); 
+    root.style.setProperty('--text', '#F0F4F8'); root.style.setProperty('--text2', '#94A3B8'); 
   } else { 
-    root.style.setProperty('--bg', '#F0F4F8'); 
-    root.style.setProperty('--bg2', '#FFFFFF'); 
-    root.style.setProperty('--text', '#1A2332'); 
-    root.style.setProperty('--text2', '#64748B'); 
+    root.style.setProperty('--bg', '#F0F4F8'); root.style.setProperty('--bg2', '#FFFFFF'); 
+    root.style.setProperty('--text', '#1A2332'); root.style.setProperty('--text2', '#64748B'); 
   } 
   showToast(isDarkMode ? 'Mode gelap' : 'Mode terang', 'info'); 
   localStorage.setItem('darkMode', isDarkMode); 
 }
-
 function showDetail(id) { 
   const point = pointsData.find(d => d.id === id); 
   if (!point) return; 
@@ -377,97 +269,39 @@ function showDetail(id) {
     alert(`Dusun: ${point.dusun}\nDesa: ${point.desa}\nKecamatan: ${point.kec}\nStatus: ${labelMap[point.status]}\nProvider: ${point.provider}\nPopulasi: ${point.populasi} jiwa\nElevasi: ${point.elev} mdpl\nKeterangan: ${point.ket}`); 
   } 
 }
-
 function closeBottomSheet() { const sheet = document.getElementById('bottomSheet'); if (sheet) sheet.classList.remove('open'); }
-
 function togglePanel(name) { 
   const panel = document.getElementById('panel-' + name); 
-  if (activePanel === name && panel) { 
-    panel.style.display = 'none'; 
-    activePanel = null; 
-  } else { 
-    document.querySelectorAll('.glass-panel').forEach(p => { if (p) p.style.display = 'none'; }); 
-    if (panel) panel.style.display = 'flex'; 
-    activePanel = name; 
-  } 
+  if (activePanel === name && panel) { panel.style.display = 'none'; activePanel = null; } 
+  else { document.querySelectorAll('.glass-panel').forEach(p => { if (p) p.style.display = 'none'; }); if (panel) panel.style.display = 'flex'; activePanel = name; } 
 }
-
-function toggleSidebar() { 
-  const sidebar = document.getElementById('sidebar'); 
-  const overlay = document.getElementById('sidebarOverlay'); 
-  if (sidebar && overlay) { 
-    sidebar.classList.toggle('open'); 
-    overlay.classList.toggle('open'); 
-  } 
-}
-
-function closeSidebar() { 
-  const sidebar = document.getElementById('sidebar'); 
-  const overlay = document.getElementById('sidebarOverlay'); 
-  if (sidebar && overlay) { 
-    sidebar.classList.remove('open'); 
-    overlay.classList.remove('open'); 
-  } 
-}
-
+function toggleSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebarOverlay'); if (sidebar && overlay) { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); } }
+function closeSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebarOverlay'); if (sidebar && overlay) { sidebar.classList.remove('open'); overlay.classList.remove('open'); } }
 function exportToCSV() { 
-  if (filteredData.length === 0) {
-    showToast('Tidak ada data untuk diexport', 'warning');
-    return;
-  }
+  if (filteredData.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
   const headers = ['ID','Kecamatan','Desa','Dusun','Latitude','Longitude','Status','RSSI','Provider','Populasi','Luas','Elevasi','Keterangan']; 
   const rows = filteredData.map(p => [p.id, p.kec, p.desa, p.dusun, p.lat, p.lng, p.status, p.rssi || 'N/A', p.provider, p.populasi, p.luas, p.elev, p.ket]); 
   const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n'); 
   const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv' }); 
-  const link = document.createElement('a'); 
-  link.href = URL.createObjectURL(blob); 
+  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); 
   link.download = `blank-spot-${new Date().toISOString().slice(0,10)}.csv`; 
-  link.click(); 
-  URL.revokeObjectURL(link.href); 
+  link.click(); URL.revokeObjectURL(link.href); 
   showToast(`${filteredData.length} data diexport`, 'success'); 
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  layers = { 
-    satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri', maxZoom: 19 }), 
-    osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }) 
-  };
-  
+  layers = { satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri', maxZoom: 19 }), osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap', maxZoom: 19 }) };
   map = L.map('map', { zoomControl: false }).setView([-7.090, 111.650], 12);
   layers.satellite.addTo(map);
-  
-  markerCluster = L.markerClusterGroup({ 
-    maxClusterRadius: 50, 
-    spiderfyOnMaxZoom: true, 
-    showCoverageOnHover: false, 
-    iconCreateFunction: cluster => { 
-      const count = cluster.getChildCount(); 
-      let color = '#00D4FF'; 
-      if (count > 10) color = '#FF3B5C'; 
-      else if (count > 5) color = '#FFD700'; 
-      return L.divIcon({ 
-        html: `<div class="cluster-icon" style="background:${color};"><span>${count}</span><div class="cluster-pulse" style="background:${color}"></div></div>`, 
-        className: 'marker-cluster-custom', 
-        iconSize: [42,42], 
-        iconAnchor: [21,21] 
-      }); 
-    } 
-  });
+  markerCluster = L.markerClusterGroup({ maxClusterRadius: 50, spiderfyOnMaxZoom: true, showCoverageOnHover: false, iconCreateFunction: cluster => { const count = cluster.getChildCount(); let color = '#00D4FF'; if (count > 10) color = '#FF3B5C'; else if (count > 5) color = '#FFD700'; return L.divIcon({ html: `<div class="cluster-icon" style="background:${color};"><span>${count}</span><div class="cluster-pulse" style="background:${color}"></div></div>`, className: 'marker-cluster-custom', iconSize: [42,42], iconAnchor: [21,21] }); } });
   map.addLayer(markerCluster);
-  
-  // Add boundary polygons
   L.polygon([[-7.095,111.620],[-7.100,111.645],[-7.108,111.660],[-7.115,111.655],[-7.128,111.648],[-7.135,111.630],[-7.130,111.615],[-7.120,111.608],[-7.108,111.610],[-7.095,111.620]], { color:'#00AAFF', fillColor:'#00AAFF', fillOpacity:0.06, weight:2, dashArray:'8,4' }).addTo(map);
   L.polygon([[-7.072,111.640],[-7.073,111.670],[-7.085,111.695],[-7.098,111.690],[-7.107,111.680],[-7.108,111.660],[-7.100,111.645],[-7.095,111.620],[-7.080,111.625],[-7.072,111.640]], { color:'#FF6B35', fillColor:'#FF6B35', fillOpacity:0.06, weight:2, dashArray:'8,4' }).addTo(map);
-  
   document.getElementById('layerSat')?.classList.add('active');
-  
-  const savedDark = localStorage.getItem('darkMode'); 
-  if (savedDark === 'false') toggleDarkMode();
-  
+  const savedDark = localStorage.getItem('darkMode'); if (savedDark === 'false') toggleDarkMode();
   fetchDataFromSheets();
   setInterval(() => fetchDataFromSheets(), 5 * 60 * 1000);
   setTimeout(() => map?.invalidateSize(), 100);
-  
   map.on('click', () => { if (activePanel) togglePanel(activePanel); closeBottomSheet(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { if (activePanel) togglePanel(activePanel); closeBottomSheet(); closeSidebar(); } });
 });
