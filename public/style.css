@@ -20,6 +20,32 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 
 .app { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
 
+/* Back to Home Button */
+.back-home-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 1002;
+  background: var(--glass);
+  backdrop-filter: blur(20px);
+  padding: 8px 16px;
+  border-radius: 40px;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--glass-border);
+  transition: all 0.3s;
+}
+
+.back-home-btn:hover {
+  background: rgba(0, 212, 255, 0.2);
+  color: var(--accent);
+  transform: translateX(-2px);
+}
+
 /* Data Status Bar */
 .data-status-bar {
   position: fixed;
@@ -349,27 +375,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .user-pulse { width: 16px; height: 16px; background: var(--accent); border-radius: 50%; box-shadow: 0 0 0 0 var(--accent); animation: user-pulse 1.5s infinite; }
 @keyframes user-pulse { 0% { box-shadow: 0 0 0 0 var(--accent); } 70% { box-shadow: 0 0 0 15px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
 
-/* Empty State untuk Map */
-.empty-map-state {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  z-index: 10;
-  background: var(--glass);
-  backdrop-filter: blur(16px);
-  padding: 24px 32px;
-  border-radius: 24px;
-  border: 1px solid var(--glass-border);
-  pointer-events: none;
-}
-.empty-map-icon { font-size: 48px; margin-bottom: 12px; }
-.empty-map-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-.empty-map-desc { font-size: 12px; color: var(--text2); }
-
 /* Responsive */
 @media (max-width: 768px) {
+  .back-home-btn { top: auto; bottom: 20px; left: 20px; }
   .menu-toggle { display: flex; }
   .top-bar { top: 70px; width: calc(100% - 20px); }
   .brand-text span { display: none; }
