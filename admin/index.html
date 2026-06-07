@@ -6,7 +6,7 @@
   <title>Admin Panel SIG Blank Spot - Bojonegoro</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-  <link rel="stylesheet" href="admin.css">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
@@ -135,7 +135,7 @@
           <h3><i class="fas fa-key"></i> Konfigurasi API</h3>
           <div class="form-group">
             <label>Google Apps Script URL</label>
-            <input type="text" id="apiUrl" style="width: 100%;">
+            <input type="text" id="apiUrl" style="width: 100%;" value="https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec">
             <small>URL Web App dari Google Apps Script</small>
           </div>
           <button class="btn-primary" id="saveApiConfig"><i class="fas fa-save"></i> Simpan Konfigurasi</button>
@@ -157,6 +157,7 @@
           <hr>
           <button class="btn-outline" id="resetDataBtn"><i class="fas fa-trash-alt"></i> Reset Data Kosong</button>
           <button class="btn-primary" id="addSampleDataBtn" style="margin-left: 10px;"><i class="fas fa-database"></i> Tambah Sample Data</button>
+          <button class="btn-primary" id="fullSyncBtn" style="margin-left: 10px; background: linear-gradient(95deg, #10B981, #059669);"><i class="fas fa-sync-alt"></i> Sinkronisasi Penuh</button>
         </div>
       </div>
     </div>
@@ -195,6 +196,6 @@
   </div>
 </div>
 
-<script src="admin.js"></script>
+<script src="script.js"></script>
 </body>
 </html>
