@@ -1,12 +1,11 @@
 // ============================================
-// ADMIN PANEL - OPTIMIZED VERSION
-// FAST CRUD OPERATIONS WITH MINIMAL DELAY
+// ADMIN PANEL 
 // ============================================
 
-let API_URL = 'https://script.google.com/macros/s/AKfycbwVyZS99hoQLB_rWZBhW9JEF8LPS_3mi4nA9udsrW3gwAHNtlrkHOzs5qQ1X6Qb9gyoVg/exec';
+let API_URL = 'https://script.google.com/macros/s/AKfycbxWL_zJ-TML_497iusMCgSPdgWsUWe0XqrcTJb_f-w-Ob0hAVbTSisWrd-EPAWLpTps_w/exec';
 let pointsData = [];
 let isLoading = false;
-let pendingRequests = new Map(); // Untuk cancel request yang tidak perlu
+let renderTimeout = null;
 
 // ========== LOGIN ==========
 function checkLogin() {
@@ -65,7 +64,7 @@ document.querySelectorAll('.menu-item').forEach(item => {
     });
 });
 
-// ========== OPTIMIZED API CALL ==========
+// ========== API CALL ==========
 async function callApi(action, data = null, id = null) {
     try {
         let url = `${API_URL}?action=${action}&t=${Date.now()}`;
@@ -79,7 +78,7 @@ async function callApi(action, data = null, id = null) {
         }
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
         
         const response = await fetch(url, {
             method: 'GET',
@@ -104,7 +103,7 @@ async function callApi(action, data = null, id = null) {
     }
 }
 
-// ========== LOAD DATA (OPTIMIZED) ==========
+// ========== LOAD DATA ==========
 async function loadDataFromSheets(showLog = true) {
     if (isLoading) return;
     isLoading = true;
@@ -128,7 +127,9 @@ async function loadDataFromSheets(showLog = true) {
                 elev: item.elev || 0,
                 ket: item.ket || ''
             }));
-            if (showLog) addLog(`✅ ${pointsData.length} data`, 'success');
+            // Urutkan berdasarkan ID
+            pointsData.sort((a, b) => a.id - b.id);
+            if (showLog) addLog(`✅ ${pointsData.length} data (ID 1-${pointsData.length})`, 'success');
         } else {
             pointsData = [];
             if (showLog) addLog('📭 Data kosong', 'info');
@@ -144,9 +145,7 @@ async function loadDataFromSheets(showLog = true) {
     isLoading = false;
 }
 
-// ========== RENDER FUNCTIONS (OPTIMIZED) ==========
-let renderTimeout = null;
-
+// ========== RENDER FUNCTIONS ==========
 function renderDashboard() {
     const blank = pointsData.filter(p => p.status === 'blank').length;
     const lemah = pointsData.filter(p => p.status === 'lemah').length;
@@ -180,7 +179,7 @@ function renderTable() {
         if (!tbody) return;
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada数据</td></tr>';
             return;
         }
         
@@ -228,11 +227,10 @@ function updateLastSync() {
     }
 }
 
-// ========== FAST CRUD OPERATIONS ==========
+// ========== CRUD OPERATIONS ==========
 async function addPoint(data) {
     addLog(`➕ Menambah: ${data.dusun}...`, 'info');
     
-    // Disable submit button to prevent double submission
     const submitBtn = document.querySelector('#pointForm button[type="submit"]');
     if (submitBtn) {
         submitBtn.disabled = true;
@@ -240,33 +238,14 @@ async function addPoint(data) {
     }
     
     try {
-        // Generate ID sementara untuk UI feedback
-        const tempId = Date.now();
-        const newData = {
-            ...data,
-            id: tempId,
-            rssi: data.rssi || -70,
-            elev: data.elev || 0,
-            ket: data.ket || ''
-        };
-        
-        // Optimistic update: tambah ke UI dulu
-        pointsData.push(newData);
-        renderTable();
-        renderDashboard();
-        
-        const result = await callApi('add', newData);
+        const result = await callApi('add', data);
         
         if (result.success) {
-            addLog(`✅ "${data.dusun}" berhasil ditambahkan`, 'success');
-            await loadDataFromSheets(false); // Silent refresh
+            addLog(`✅ "${data.dusun}" berhasil ditambahkan (ID: ${result.data.id})`, 'success');
+            await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
         } else {
-            // Rollback jika gagal
-            pointsData = pointsData.filter(p => p.id !== tempId);
-            renderTable();
-            renderDashboard();
             throw new Error(result.message || 'Gagal menambahkan');
         }
     } catch (error) {
@@ -288,7 +267,6 @@ function editPoint(id) {
         return;
     }
     
-    // Isi form dengan cepat
     document.getElementById('editId').value = point.id;
     document.getElementById('dusun').value = point.dusun || '';
     document.getElementById('desa').value = point.desa || '';
@@ -312,22 +290,7 @@ async function updatePoint(id, data) {
     }
     
     try {
-        const updateData = {
-            id: id,
-            ...data,
-            rssi: data.rssi || -70,
-            elev: data.elev || 0,
-            ket: data.ket || ''
-        };
-        
-        // Optimistic update
-        const index = pointsData.findIndex(p => p.id === id);
-        if (index !== -1) {
-            pointsData[index] = { ...pointsData[index], ...updateData };
-            renderTable();
-            renderDashboard();
-        }
-        
+        const updateData = { id, ...data };
         const result = await callApi('update', updateData);
         
         if (result.success) {
@@ -336,13 +299,10 @@ async function updatePoint(id, data) {
             renderTable();
             renderDashboard();
         } else {
-            // Rollback jika gagal
-            await loadDataFromSheets(false);
             throw new Error(result.message || 'Gagal mengupdate');
         }
     } catch (error) {
         addLog(`❌ Gagal update: ${error.message}`, 'error');
-        await loadDataFromSheets(false);
         return false;
     } finally {
         if (submitBtn) {
@@ -354,30 +314,47 @@ async function updatePoint(id, data) {
 }
 
 async function deletePoint(id) {
-    if (!confirm('⚠️ Hapus titik ini? Data akan dihapus permanen.')) return;
+    if (!confirm('⚠️ Hapus titik ini? ID akan otomatis diurutkan ulang.')) return;
     
     const point = pointsData.find(p => p.id === id);
     const pointName = point?.dusun || `ID ${id}`;
     addLog(`🗑️ Menghapus: ${pointName}...`, 'info');
     
     try {
-        // Optimistic delete
-        pointsData = pointsData.filter(p => p.id !== id);
-        renderTable();
-        renderDashboard();
-        
         const result = await callApi('delete', null, id);
         
         if (result.success) {
-            addLog(`✅ "${pointName}" berhasil dihapus`, 'success');
-        } else {
-            // Rollback jika gagal
+            addLog(`✅ "${pointName}" berhasil dihapus (ID akan diurutkan ulang)`, 'success');
             await loadDataFromSheets(false);
+            renderTable();
+            renderDashboard();
+        } else {
             throw new Error(result.message || 'Gagal menghapus');
         }
     } catch (error) {
         addLog(`❌ Gagal hapus: ${error.message}`, 'error');
-        await loadDataFromSheets(false);
+        return false;
+    }
+    return true;
+}
+
+// ========== RE-INDEX FUNCTION ==========
+async function reindexData() {
+    addLog('🔄 Mengurutkan ulang ID...', 'info');
+    
+    try {
+        const result = await callApi('reindex');
+        
+        if (result.success) {
+            addLog('✅ ID berhasil diurutkan ulang', 'success');
+            await loadDataFromSheets(false);
+            renderTable();
+            renderDashboard();
+        } else {
+            throw new Error(result.message || 'Gagal reindex');
+        }
+    } catch (error) {
+        addLog(`❌ Gagal reindex: ${error.message}`, 'error');
         return false;
     }
     return true;
@@ -392,7 +369,7 @@ async function testConnection() {
         const result = await callApi('test');
         
         if (result.success) {
-            addLog('✅ Connection OK!', 'success');
+            addLog(`✅ Connection OK! (${result.data.rowCount} records)`, 'success');
             if (connStatus) {
                 connStatus.innerHTML = '✅ Terhubung';
                 connStatus.style.background = '#d1fae5';
@@ -433,10 +410,8 @@ async function pushData() {
     for (const point of pointsData) {
         try {
             const result = await callApi('add', point);
-            if (result.success) {
-                success++;
-            }
-            await new Promise(r => setTimeout(r, 100)); // Delay minimal
+            if (result.success) success++;
+            await new Promise(r => setTimeout(r, 100));
         } catch(e) {
             addLog(`❌ Push ${point.dusun} gagal`, 'error');
         }
@@ -599,7 +574,12 @@ function initEventListeners() {
         sampleDataBtn.addEventListener('click', addSampleData);
     }
     
-    // Close modal on outside click
+    // Tambah tombol Re-index jika diperlukan
+    const reindexBtn = document.getElementById('reindexBtn');
+    if (reindexBtn) {
+        reindexBtn.addEventListener('click', reindexData);
+    }
+    
     window.addEventListener('click', (e) => {
         const modal = document.getElementById('pointModal');
         if (e.target === modal) {
@@ -630,3 +610,4 @@ window.pushData = pushData;
 window.saveApiConfig = saveApiConfig;
 window.changePassword = changePassword;
 window.addSampleData = addSampleData;
+window.reindexData = reindexData;
