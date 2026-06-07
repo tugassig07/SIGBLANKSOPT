@@ -1,113 +1,279 @@
 // ============================================
-// ADMIN PANEL - GOOGLE SHEETS SYNC
-// FIX VERSION - SEMUA TOMBOL BERFUNGSI
+// ADMIN PANEL - GOOGLE SHEETS SYNC (FIXED)
+// Disesuaikan dengan struktur sheet
 // ============================================
 
-const API_URL = 'https://script.google.com/macros/s/AKfycbwqsfXXu2FoT_kxS17sICM9kaicUEkGGXk6cDp6zUGwOrKstvSf5TNkVPjbL9WOBd7jSQ/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycby6xlCs43k_pefCPbcNHFX4Zu2BOCvbrrgfNQm5dg5KfmDA7XmHj1mgjNVwSovoUakEGQ/exec';
 
 // Konfigurasi Login
 const ADMIN_CREDENTIALS = {
   username: 'admin',
-  passwordHash: btoa('admin123')
+  passwordHash: 'YWRtaW4xMjM='
 };
 
+let isLoggedIn = false;
+let currentAdmin = null;
 let pointsData = [];
 let lastSyncTime = null;
-let statusChart = null;
-let kecChart = null;
+let isSyncing = false;
 
-// ========== LOGIN FUNCTIONS ==========
-function checkLoginStatus() {
-  const savedLogin = localStorage.getItem('adminLoggedIn');
-  const loginTime = localStorage.getItem('loginTime');
-  
-  if (savedLogin === 'true' && loginTime) {
-    const now = new Date().getTime();
-    const loginTimeNum = parseInt(loginTime);
-    const eightHours = 8 * 60 * 60 * 1000;
+// ========== FIXED API FUNCTIONS ==========
+
+// Fungsi untuk mengirim data ke Google Sheets
+async function sendToGoogleSheets(action, data = {}) {
+  try {
+    addLog(`🔄 ${action} - Mengirim ke Google Sheets...`, 'info');
     
-    if (now - loginTimeNum < eightHours) {
-      showAdminContent();
+    // Buat FormData untuk menghindari CORS issues
+    const formData = new URLSearchParams();
+    formData.append('action', action);
+    formData.append('data', JSON.stringify(data));
+    
+    // Gunakan mode 'cors' dengan method POST
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: formData.toString()
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success) {
+        addLog(`✅ ${action} berhasil: ${result.message || ''}`, 'success');
+        return { success: true, data: result.data };
+      } else {
+        addLog(`❌ ${action} gagal: ${result.error || 'Unknown error'}`, 'error');
+        return { success: false, error: result.error };
+      }
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    addLog(`❌ Error koneksi: ${error.message}`, 'error');
+    return { success: false, error: error.message };
+  }
+}
+
+// Fungsi untuk mengambil data dari Google Sheets
+async function fetchDataFromSheets() {
+  try {
+    addLog('📥 Mengambil data dari Google Sheets...', 'info');
+    
+    const response = await fetch(`${API_URL}?action=getData&t=${Date.now()}`, {
+      method: 'GET',
+      mode: 'cors'
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      
+      if (result.success && result.data) {
+        if (result.data.length > 0) {
+          // Map data sesuai struktur sheet
+          pointsData = result.data.map(item => ({
+            id: parseInt(item.id) || Date.now(),
+            kec: item.kec || '',
+            desa: item.desa || '',
+            dusun: item.dusun || '',
+            lat: parseFloat(item.lat || item.latitude || 0),
+            lng: parseFloat(item.lng || item.longitude || 0),
+            status: item.status || 'blank',
+            rssi: item.rssi || -70,
+            provider: item.provider || '',
+            populasi: parseInt(item.populasi) || 0,
+            luas: item.luas || '-',
+            elev: parseInt(item.elev || item.elevasi) || 0,
+            ket: item.ket || item.keterangan || '',
+            coverage2025: item.coverage2025 || '',
+            coverage2026: item.coverage2026 || '',
+            timestamp: item.timestamp || new Date().toISOString()
+          }));
+          
+          saveToLocalStorage();
+          lastSyncTime = new Date();
+          updateSyncStatus();
+          renderAll();
+          addLog(`✅ Berhasil mengambil ${pointsData.length} data dari Google Sheets`, 'success');
+          showToast(`Berhasil mengambil ${pointsData.length} data`, 'success');
+        } else {
+          addLog('📭 Data kosong dari Google Sheets', 'info');
+          pointsData = [];
+          renderAll();
+        }
+        return pointsData;
+      } else {
+        throw new Error(result.error || 'Invalid response');
+      }
+    } else {
+      throw new Error(`HTTP ${response.status}`);
+    }
+  } catch (error) {
+    addLog(`❌ Gagal mengambil data: ${error.message}`, 'error');
+    showToast('Gagal mengambil data dari Google Sheets', 'error');
+    
+    // Fallback ke localStorage
+    loadFromLocalStorage();
+    return pointsData;
+  }
+}
+
+// Fungsi push data ke Google Sheets (batch)
+async function pushToSheets() {
+  if (isSyncing) {
+    showToast('Sinkronisasi sedang berjalan...', 'warning');
+    return;
+  }
+  
+  if (pointsData.length === 0) {
+    addLog('⚠️ Tidak ada data untuk disinkronkan', 'warning');
+    showToast('Tidak ada data untuk disinkronkan', 'warning');
+    return;
+  }
+  
+  isSyncing = true;
+  const pushBtn = document.getElementById('pushToSheetBtn');
+  if (pushBtn) {
+    pushBtn.disabled = true;
+    pushBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyinkronkan...';
+  }
+  
+  try {
+    addLog(`📤 Menyinkronkan ${pointsData.length} data ke Google Sheets...`, 'info');
+    
+    // Kirim semua data sekaligus
+    const result = await sendToGoogleSheets('sync', { 
+      data: pointsData,
+      timestamp: new Date().toISOString()
+    });
+    
+    if (result.success) {
+      addLog(`✅ Berhasil menyinkronkan ${pointsData.length} data`, 'success');
+      showToast(`Berhasil menyinkronkan ${pointsData.length} data`, 'success');
+      lastSyncTime = new Date();
+      updateSyncStatus();
+    } else {
+      addLog(`❌ Sinkronisasi gagal: ${result.error}`, 'error');
+      showToast('Sinkronisasi gagal, coba lagi', 'error');
+    }
+  } catch (error) {
+    addLog(`❌ Error sinkronisasi: ${error.message}`, 'error');
+    showToast('Error saat sinkronisasi', 'error');
+  } finally {
+    isSyncing = false;
+    if (pushBtn) {
+      pushBtn.disabled = false;
+      pushBtn.innerHTML = '<i class="fas fa-upload"></i> Push ke Google Sheets';
+    }
+  }
+}
+
+// Fungsi untuk single add/update
+async function syncSinglePoint(point, action) {
+  const result = await sendToGoogleSheets(action, point);
+  return result.success;
+}
+
+// Update fungsi addPoint
+async function addPoint(pointData) {
+  const newId = pointsData.length > 0 ? Math.max(...pointsData.map(p => p.id), 0) + 1 : 1;
+  const newPoint = { 
+    id: newId, 
+    ...pointData, 
+    rssi: pointData.status === 'blank' ? -90 : -70,
+    timestamp: new Date().toISOString(),
+    coverage2025: '',
+    coverage2026: ''
+  };
+  
+  pointsData.push(newPoint);
+  saveToLocalStorage();
+  renderAll();
+  addLog(`➕ Menambahkan titik: ${newPoint.dusun} (ID: ${newId})`, 'success');
+  showToast(`Titik "${newPoint.dusun}" berhasil ditambahkan`, 'success');
+  
+  // Sync ke Google Sheets
+  await syncSinglePoint(newPoint, 'add');
+  return newPoint;
+}
+
+// Update fungsi updatePoint
+async function updatePoint(id, updatedData) {
+  const index = pointsData.findIndex(p => p.id === id);
+  if (index !== -1) {
+    pointsData[index] = { 
+      ...pointsData[index], 
+      ...updatedData, 
+      timestamp: new Date().toISOString() 
+    };
+    saveToLocalStorage();
+    renderAll();
+    addLog(`✏️ Update titik: ${updatedData.dusun} (ID: ${id})`, 'info');
+    showToast(`Titik "${updatedData.dusun}" berhasil diperbarui`, 'success');
+    
+    // Sync ke Google Sheets
+    await syncSinglePoint(pointsData[index], 'update');
+  }
+}
+
+// Update fungsi deletePoint
+async function deletePoint(id) {
+  if (confirm('Hapus titik ini? Data akan dihapus dari Google Sheets juga.')) {
+    const point = pointsData.find(p => p.id === id);
+    pointsData = pointsData.filter(p => p.id !== id);
+    saveToLocalStorage();
+    renderAll();
+    addLog(`🗑️ Hapus titik: ${point?.dusun} (ID: ${id})`, 'warning');
+    showToast(`Titik "${point?.dusun}" berhasil dihapus`, 'success');
+    
+    // Sync ke Google Sheets
+    await syncSinglePoint({ id: id }, 'delete');
+  }
+}
+
+// Test koneksi yang lebih baik
+async function testConnection() {
+  addLog('🔌 Menguji koneksi ke Google Sheets...', 'info');
+  
+  try {
+    const result = await sendToGoogleSheets('test', { timestamp: Date.now() });
+    
+    if (result.success) {
+      addLog('✅ Koneksi berhasil! Google Sheets API merespon dengan baik', 'success');
+      showToast('Koneksi berhasil', 'success');
+      
+      // Update status badge
+      const apiStatus = document.getElementById('apiStatus');
+      if (apiStatus) {
+        apiStatus.className = 'status-badge status-connected';
+        apiStatus.innerHTML = 'Terhubung';
+      }
       return true;
     } else {
-      logout();
-      return false;
+      throw new Error(result.error);
     }
-  }
-  return false;
-}
-
-function login(username, password) {
-  const encodedPassword = btoa(password);
-  
-  if (username === ADMIN_CREDENTIALS.username && encodedPassword === ADMIN_CREDENTIALS.passwordHash) {
-    localStorage.setItem('adminLoggedIn', 'true');
-    localStorage.setItem('currentAdmin', username);
-    localStorage.setItem('loginTime', new Date().getTime().toString());
+  } catch (error) {
+    addLog(`❌ Koneksi gagal: ${error.message}`, 'error');
+    showToast('Koneksi gagal, periksa URL API', 'error');
     
-    showAdminContent();
-    showToast(`Selamat datang, ${username}!`, 'success');
-    return true;
-  }
-  return false;
-}
-
-function logout() {
-  localStorage.removeItem('adminLoggedIn');
-  localStorage.removeItem('currentAdmin');
-  localStorage.removeItem('loginTime');
-  
-  document.getElementById('adminContent').style.display = 'none';
-  document.getElementById('loginModal').style.display = 'flex';
-  document.getElementById('loginForm').reset();
-  showToast('Anda telah logout', 'info');
-}
-
-function showAdminContent() {
-  document.getElementById('loginModal').style.display = 'none';
-  document.getElementById('adminContent').style.display = 'block';
-  document.getElementById('adminName').textContent = localStorage.getItem('currentAdmin') || 'Admin';
-  
-  initMobileMenu();
-  loadData();
-  initEventListeners();
-}
-
-// ========== MOBILE MENU ==========
-function initMobileMenu() {
-  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-  const sidebar = document.getElementById('sidebarAdmin');
-  
-  function toggleMenu() {
-    sidebar.classList.toggle('open');
-  }
-  
-  if (mobileMenuBtn) {
-    mobileMenuBtn.removeEventListener('click', toggleMenu);
-    mobileMenuBtn.addEventListener('click', toggleMenu);
-  }
-  
-  // Close sidebar when clicking on nav item (mobile)
-  const navItems = document.querySelectorAll('.nav-item');
-  navItems.forEach(item => {
-    item.removeEventListener('click', closeMenuOnMobile);
-    item.addEventListener('click', closeMenuOnMobile);
-  });
-  
-  function closeMenuOnMobile() {
-    if (window.innerWidth <= 768) {
-      sidebar.classList.remove('open');
+    const apiStatus = document.getElementById('apiStatus');
+    if (apiStatus) {
+      apiStatus.className = 'status-badge';
+      apiStatus.style.background = '#FEE2E2';
+      apiStatus.style.color = '#DC2626';
+      apiStatus.innerHTML = 'Gagal Terhubung';
     }
+    return false;
   }
 }
 
-// ========== CORE FUNCTIONS ==========
+// ========== SISANYA SAMA DENGAN SEBELUMNYA ==========
+
 function showToast(msg, type = 'success') {
-  const existingToast = document.querySelector('.toast-admin');
-  if (existingToast) existingToast.remove();
-  
   let t = document.createElement('div'); 
-  t.className = `toast-admin`; 
+  t.className = `toast-admin toast-${type}`; 
   t.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i> ${msg}`;
   document.body.appendChild(t);
   setTimeout(() => t.remove(), 3000);
@@ -118,98 +284,12 @@ function addLog(message, type = 'info') {
   if (logContainer) {
     const time = new Date().toLocaleTimeString();
     const logEntry = document.createElement('div');
-    logEntry.className = `log-entry ${type === 'success' ? 'log-success' : type === 'error' ? 'log-error' : ''}`;
+    logEntry.className = `log-entry log-${type}`;
     logEntry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
     logContainer.prepend(logEntry);
     while (logContainer.children.length > 20) {
       logContainer.removeChild(logContainer.lastChild);
     }
-  }
-}
-
-async function callGoogleAPI(action, data = {}) {
-  try {
-    const payload = { action, ...data };
-    await fetch(API_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    addLog(`📤 ${action.toUpperCase()} request sent`, 'info');
-    return { success: true };
-  } catch (error) {
-    addLog(`❌ API Error: ${error.message}`, 'error');
-    return null;
-  }
-}
-
-async function fetchDataFromSheets() {
-  try {
-    addLog('📥 Mengambil data dari Google Sheets...', 'info');
-    const response = await fetch(API_URL);
-    const result = await response.json();
-    
-    if (result.success && result.data && result.data.length > 0) {
-      pointsData = result.data.map(item => ({
-        id: parseInt(item.id), kec: item.kec, desa: item.desa, dusun: item.dusun,
-        lat: parseFloat(item.lat), lng: parseFloat(item.lng), status: item.status,
-        rssi: item.rssi, provider: item.provider, populasi: parseInt(item.populasi),
-        luas: item.luas || '-', elev: parseInt(item.elev) || 0, ket: item.ket || ''
-      }));
-      saveToLocalStorage();
-      lastSyncTime = new Date();
-      updateSyncStatus();
-      renderAll();
-      addLog(`✅ Berhasil mengambil ${pointsData.length} data`, 'success');
-      showToast(`Berhasil mengambil ${pointsData.length} data`, 'success');
-    } else {
-      pointsData = [];
-      saveToLocalStorage();
-      renderAll();
-    }
-    return pointsData;
-  } catch (error) {
-    addLog(`❌ Error: ${error.message}`, 'error');
-    loadFromLocalStorage();
-    return null;
-  }
-}
-
-async function pushToSheets() {
-  if (pointsData.length === 0) {
-    showToast('Tidak ada data untuk disinkronkan', 'warning');
-    return;
-  }
-  
-  addLog(`📤 Menyinkronkan ${pointsData.length} data...`, 'info');
-  showToast('Menyinkronkan data...', 'info');
-  
-  for (const point of pointsData) {
-    const action = point.id > 1000 ? 'add' : 'update';
-    await callGoogleAPI(action, point);
-    await new Promise(resolve => setTimeout(resolve, 100));
-  }
-  
-  addLog(`✅ Berhasil menyinkronkan ${pointsData.length} data`, 'success');
-  showToast(`Berhasil menyinkronkan ${pointsData.length} data`, 'success');
-  lastSyncTime = new Date();
-  updateSyncStatus();
-}
-
-async function testConnection() {
-  addLog('🔌 Menguji koneksi...', 'info');
-  try {
-    const response = await fetch(API_URL);
-    if (response.ok) {
-      addLog('✅ Koneksi berhasil!', 'success');
-      showToast('Koneksi berhasil', 'success');
-      return true;
-    }
-  } catch (error) {
-    addLog(`❌ Koneksi gagal: ${error.message}`, 'error');
-    showToast('Koneksi gagal', 'error');
-    return false;
   }
 }
 
@@ -233,82 +313,12 @@ function loadFromLocalStorage() {
 }
 
 function updateSyncStatus() {
+  const syncStatusSpan = document.getElementById('syncStatus');
   const lastSyncSpan = document.getElementById('lastSync');
+  if (syncStatusSpan) syncStatusSpan.innerHTML = '<i class="fas fa-check-circle"></i> Tersinkronasi';
   if (lastSyncSpan && lastSyncTime) lastSyncSpan.textContent = lastSyncTime.toLocaleString();
 }
 
-async function loadData() {
-  await fetchDataFromSheets();
-}
-
-// ========== CRUD ==========
-function addPoint(pointData) {
-  const newId = pointsData.length > 0 ? Math.max(...pointsData.map(p => p.id), 0) + 1 : 1;
-  const newPoint = { id: newId, ...pointData, rssi: pointData.status === 'blank' ? null : -70 };
-  pointsData.push(newPoint);
-  saveToLocalStorage();
-  renderAll();
-  addLog(`➕ Menambahkan titik: ${newPoint.dusun} (ID: ${newId})`, 'success');
-  showToast(`Titik "${newPoint.dusun}" berhasil ditambahkan`, 'success');
-  callGoogleAPI('add', newPoint);
-  return newPoint;
-}
-
-function editPoint(id) {
-  const point = pointsData.find(p => p.id === id);
-  if (point) {
-    document.getElementById('editId').value = point.id;
-    document.getElementById('dusun').value = point.dusun;
-    document.getElementById('desa').value = point.desa;
-    document.getElementById('kec').value = point.kec;
-    document.getElementById('status').value = point.status;
-    document.getElementById('lat').value = point.lat;
-    document.getElementById('lng').value = point.lng;
-    document.getElementById('populasi').value = point.populasi;
-    document.getElementById('provider').value = point.provider || '';
-    document.getElementById('luas').value = point.luas || '';
-    document.getElementById('elev').value = point.elev || 0;
-    document.getElementById('ket').value = point.ket || '';
-    document.getElementById('modalTitle').innerText = 'Edit Titik';
-    document.getElementById('pointModal').style.display = 'flex';
-  }
-}
-
-function updatePoint(id, updatedData) {
-  const index = pointsData.findIndex(p => p.id === id);
-  if (index !== -1) {
-    pointsData[index] = { ...pointsData[index], ...updatedData };
-    saveToLocalStorage();
-    renderAll();
-    addLog(`✏️ Update titik: ${updatedData.dusun} (ID: ${id})`, 'info');
-    showToast(`Titik "${updatedData.dusun}" berhasil diperbarui`, 'success');
-    callGoogleAPI('update', pointsData[index]);
-  }
-}
-
-function deletePoint(id) {
-  if (confirm('Hapus titik ini?')) {
-    const point = pointsData.find(p => p.id === id);
-    pointsData = pointsData.filter(p => p.id !== id);
-    saveToLocalStorage();
-    renderAll();
-    addLog(`🗑️ Hapus titik: ${point?.dusun} (ID: ${id})`, 'warning');
-    showToast(`Titik "${point?.dusun}" berhasil dihapus`, 'success');
-    callGoogleAPI('delete', { id: id });
-  }
-}
-
-function resetToDefault() {
-  if (confirm('Reset ke data kosong? Semua data yang ada akan hilang.')) {
-    pointsData = [];
-    saveToLocalStorage();
-    renderAll();
-    addLog('🔄 Data direset ke kosong', 'warning');
-    showToast('Data berhasil direset ke kosong', 'info');
-  }
-}
-
-// ========== RENDER FUNCTIONS ==========
 function renderStats() {
   const blank = pointsData.filter(p => p.status === 'blank').length;
   const lemah = pointsData.filter(p => p.status === 'lemah').length;
@@ -318,58 +328,49 @@ function renderStats() {
   
   const statGrid = document.getElementById('statGrid');
   if (statGrid) {
-    statGrid.innerHTML = `
-      <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">${total}</div><div class="stat-sub">Kedewan + Kasiman</div></div>
-      <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">${blank}</div><div class="stat-sub">Prioritas tinggi</div></div>
-      <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">${lemah}</div><div class="stat-sub">Perlu perbaikan</div></div>
-      <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">${baik}</div><div class="stat-sub">+${total > 0 ? Math.round(baik/total*100) : 0}% coverage</div></div>
-    `;
-  }
-  
-  // Update charts
-  if (statusChart) statusChart.destroy();
-  const statusCtx = document.getElementById('statusChart')?.getContext('2d');
-  if (statusCtx) {
-    statusChart = new Chart(statusCtx, {
-      type: 'doughnut',
-      data: {
-        labels: ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'],
-        datasets: [{ data: [blank, lemah, sedang, baik], backgroundColor: ['#DC2626', '#D97706', '#EA580C', '#059669'], borderWidth: 0 }]
-      },
-      options: { responsive: true, maintainAspectRatio: true, plugins: { legend: { position: 'bottom', labels: { color: '#1E293B' } } } }
-    });
-  }
-  
-  if (kecChart) kecChart.destroy();
-  const kecCtx = document.getElementById('kecChart')?.getContext('2d');
-  if (kecCtx) {
-    const ked = pointsData.filter(p => p.kec === 'Kedewan').length;
-    const kas = pointsData.filter(p => p.kec === 'Kasiman').length;
-    kecChart = new Chart(kecCtx, {
-      type: 'bar',
-      data: { labels: ['Kedewan', 'Kasiman'], datasets: [{ label: 'Jumlah Titik', data: [ked, kas], backgroundColor: '#00D4FF' }] },
-      options: { responsive: true, maintainAspectRatio: true, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-    });
+    if (total === 0) {
+      statGrid.innerHTML = `
+        <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">0</div><div class="stat-sub">Belum ada data</div></div>
+        <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">0</div><div class="stat-sub">Prioritas tinggi</div></div>
+        <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">0</div><div class="stat-sub">Perlu perbaikan</div></div>
+        <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">0</div><div class="stat-sub">0% coverage</div></div>
+      `;
+    } else {
+      statGrid.innerHTML = `
+        <div class="stat-card"><div class="stat-title">Total Titik</div><div class="stat-number">${total}</div><div class="stat-sub">Kedewan + Kasiman</div></div>
+        <div class="stat-card"><div class="stat-title">Blank Spot</div><div class="stat-number" style="color:#DC2626">${blank}</div><div class="stat-sub">Prioritas tinggi</div></div>
+        <div class="stat-card"><div class="stat-title">Sinyal Lemah</div><div class="stat-number" style="color:#D97706">${lemah}</div><div class="stat-sub">Perlu perbaikan</div></div>
+        <div class="stat-card"><div class="stat-title">Cakupan Baik</div><div class="stat-number" style="color:#059669">${baik}</div><div class="stat-sub">${total > 0 ? Math.round(baik/total*100) : 0}% coverage</div></div>
+      `;
+    }
   }
 }
 
 function renderTable() {
   const searchInput = document.getElementById('searchPoint');
-  const filterKec = document.getElementById('filterKec')?.value || 'all';
-  const filterStatus = document.getElementById('filterStatusPoint')?.value || 'all';
   const search = searchInput ? searchInput.value.toLowerCase() : '';
-  
-  const filtered = pointsData.filter(p => {
-    const matchKec = filterKec === 'all' || p.kec === filterKec;
-    const matchStatus = filterStatus === 'all' || p.status === filterStatus;
-    const matchSearch = p.dusun.toLowerCase().includes(search) || p.desa.toLowerCase().includes(search);
-    return matchKec && matchStatus && matchSearch;
-  });
+  const filtered = pointsData.filter(p => 
+    p.dusun.toLowerCase().includes(search) || 
+    p.desa.toLowerCase().includes(search)
+  );
   
   const tbody = document.getElementById('tableBody');
   if (tbody) {
     if (filtered.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 60px;"><div class="empty-state-container"><div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div><div class="empty-title">Belum ada data titik</div><div class="empty-desc">Klik tombol "Tambah Titik" untuk menambahkan data</div></div></td></tr>`;
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 60px;">
+            <div class="empty-state-container">
+              <div class="empty-icon"><i class="fas fa-map-marker-alt"></i></div>
+              <div class="empty-title">Belum ada data titik</div>
+              <div class="empty-desc">Klik tombol "Tambah Titik" untuk menambahkan data blank spot</div>
+              <button class="btn-primary" onclick="document.getElementById('addPointBtn').click()" style="margin-top: 16px;">
+                <i class="fas fa-plus"></i> Tambah Titik Pertama
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
     } else {
       tbody.innerHTML = filtered.map(p => `
         <tr>
@@ -380,7 +381,10 @@ function renderTable() {
           <td><span class="badge-status badge-${p.status}">${p.status.toUpperCase()}</span></td>
           <td>${p.populasi}</td>
           <td>${p.provider || '-'}</td>
-          <td class="action-icons"><i class="fas fa-edit" onclick="editPoint(${p.id})"></i> <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i></td>
+          <td class="action-icons">
+            <i class="fas fa-edit" onclick="editPoint(${p.id})"></i> 
+            <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i>
+          </td>
         </tr>
       `).join('');
     }
@@ -390,6 +394,16 @@ function renderTable() {
 function renderAll() {
   renderStats();
   renderTable();
+}
+
+function resetToDefault() {
+  if (confirm('Reset ke data kosong? Semua data yang ada akan hilang.')) {
+    pointsData = [];
+    saveToLocalStorage();
+    renderAll();
+    addLog('🔄 Data direset ke kosong', 'warning');
+    showToast('Data berhasil direset ke kosong', 'info');
+  }
 }
 
 // ========== EVENT LISTENERS ==========
@@ -405,102 +419,105 @@ function initEventListeners() {
   
   tabs.forEach(tab => {
     if (tab.classList.contains('logout-item')) return;
-    tab.removeEventListener('click', handleTabClick);
-    tab.addEventListener('click', handleTabClick);
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.getAttribute('data-tab');
+      Object.keys(views).forEach(v => { 
+        if (views[v]) views[v].style.display = 'none'; 
+      });
+      if (target === 'dashboard' && views.dashboard) views.dashboard.style.display = 'block';
+      else if (target === 'points' && views.points) views.points.style.display = 'block';
+      else if (target === 'sync' && views.sync) views.sync.style.display = 'block';
+      else if (target === 'settings' && views.settings) views.settings.style.display = 'block';
+      
+      const mainTitle = document.getElementById('mainTitle');
+      if (mainTitle) {
+        mainTitle.innerText = target === 'dashboard' ? 'Dashboard SIG 2026' : 
+                              target === 'points' ? 'Kelola Titik Survei' : 
+                              target === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
+      }
+    });
   });
   
-  function handleTabClick(e) {
-    const tab = e.currentTarget;
-    const target = tab.getAttribute('data-tab');
-    
-    tabs.forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    
-    Object.keys(views).forEach(v => { if (views[v]) views[v].style.display = 'none'; });
-    if (target === 'dashboard' && views.dashboard) views.dashboard.style.display = 'block';
-    else if (target === 'points' && views.points) views.points.style.display = 'block';
-    else if (target === 'sync' && views.sync) views.sync.style.display = 'block';
-    else if (target === 'settings' && views.settings) views.settings.style.display = 'block';
-    
-    const mainTitle = document.getElementById('mainTitle');
-    if (mainTitle) {
-      mainTitle.innerText = target === 'dashboard' ? 'Dashboard SIG 2026' : target === 'points' ? 'Kelola Titik Survei' : target === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
-    }
-  }
-  
-  // Buttons
+  // Modal Events
   const addPointBtn = document.getElementById('addPointBtn');
   if (addPointBtn) {
-    addPointBtn.removeEventListener('click', openAddModal);
-    addPointBtn.addEventListener('click', openAddModal);
+    addPointBtn.addEventListener('click', () => {
+      document.getElementById('pointForm').reset();
+      document.getElementById('editId').value = '';
+      document.getElementById('modalTitle').innerText = 'Tambah Titik Baru';
+      document.getElementById('pointModal').style.display = 'flex';
+    });
   }
   
   const closeModalBtn = document.getElementById('closeModalBtn');
-  const cancelModalBtn = document.getElementById('cancelModalBtn');
-  const closeModal = () => { document.getElementById('pointModal').style.display = 'none'; };
-  if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
-  if (cancelModalBtn) cancelModalBtn.addEventListener('click', closeModal);
+  if (closeModalBtn) {
+    closeModalBtn.addEventListener('click', () => {
+      document.getElementById('pointModal').style.display = 'none';
+    });
+  }
   
   const pointForm = document.getElementById('pointForm');
   if (pointForm) {
-    pointForm.removeEventListener('submit', handleFormSubmit);
-    pointForm.addEventListener('submit', handleFormSubmit);
-  }
-  
-  function handleFormSubmit(e) {
-    e.preventDefault();
-    const idEdit = parseInt(document.getElementById('editId').value);
-    const pointData = {
-      dusun: document.getElementById('dusun').value,
-      desa: document.getElementById('desa').value,
-      kec: document.getElementById('kec').value,
-      status: document.getElementById('status').value,
-      lat: parseFloat(document.getElementById('lat').value),
-      lng: parseFloat(document.getElementById('lng').value),
-      populasi: parseInt(document.getElementById('populasi').value) || 0,
-      provider: document.getElementById('provider').value,
-      luas: document.getElementById('luas').value,
-      elev: parseInt(document.getElementById('elev').value) || 0,
-      ket: document.getElementById('ket').value
-    };
-    if (idEdit) { updatePoint(idEdit, pointData); } 
-    else { addPoint(pointData); }
-    document.getElementById('pointModal').style.display = 'none';
-  }
-  
-  function openAddModal() {
-    document.getElementById('pointForm').reset();
-    document.getElementById('editId').value = '';
-    document.getElementById('modalTitle').innerText = 'Tambah Titik Baru';
-    document.getElementById('pointModal').style.display = 'flex';
+    pointForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const idEdit = parseInt(document.getElementById('editId').value);
+      const pointData = {
+        dusun: document.getElementById('dusun').value,
+        desa: document.getElementById('desa').value,
+        kec: document.getElementById('kec').value,
+        status: document.getElementById('status').value,
+        lat: parseFloat(document.getElementById('lat').value),
+        lng: parseFloat(document.getElementById('lng').value),
+        populasi: parseInt(document.getElementById('populasi').value) || 0,
+        provider: document.getElementById('provider').value,
+        luas: document.getElementById('luas').value,
+        elev: parseInt(document.getElementById('elev').value) || 0,
+        ket: document.getElementById('ket').value
+      };
+      if (idEdit) {
+        updatePoint(idEdit, pointData);
+      } else {
+        addPoint(pointData);
+      }
+      document.getElementById('pointModal').style.display = 'none';
+    });
   }
   
   // Sync Buttons
-  const pushBtn = document.getElementById('pushToSheetBtn');
-  const pullBtn = document.getElementById('pullFromSheetBtn');
-  const testBtn = document.getElementById('testConnectionBtn');
-  const refreshBtn = document.getElementById('refreshDashboardBtn');
-  const saveApiBtn = document.getElementById('saveApiConfig');
+  const syncNowBtn = document.getElementById('syncNowBtn');
+  if (syncNowBtn) syncNowBtn.addEventListener('click', pushToSheets);
+  
+  const pushToSheetBtn = document.getElementById('pushToSheetBtn');
+  if (pushToSheetBtn) pushToSheetBtn.addEventListener('click', pushToSheets);
+  
+  const pullFromSheetBtn = document.getElementById('pullFromSheetBtn');
+  if (pullFromSheetBtn) pullFromSheetBtn.addEventListener('click', fetchDataFromSheets);
+  
+  const testConnectionBtn = document.getElementById('testConnectionBtn');
+  if (testConnectionBtn) testConnectionBtn.addEventListener('click', testConnection);
+  
+  const refreshDashboardBtn = document.getElementById('refreshDashboardBtn');
+  if (refreshDashboardBtn) refreshDashboardBtn.addEventListener('click', fetchDataFromSheets);
+  
+  const saveApiConfig = document.getElementById('saveApiConfig');
+  if (saveApiConfig) {
+    saveApiConfig.addEventListener('click', () => {
+      const newUrl = document.getElementById('apiUrl').value;
+      if (newUrl) {
+        localStorage.setItem('googleApiUrl', newUrl);
+        showToast('Konfigurasi disimpan', 'success');
+      }
+    });
+  }
+  
   const resetDataBtn = document.getElementById('resetDataBtn');
-  const changePassBtn = document.getElementById('changePasswordBtn');
-  const logoutBtn = document.getElementById('logoutBtn');
-  const searchPoint = document.getElementById('searchPoint');
-  const filterKec = document.getElementById('filterKec');
-  const filterStatus = document.getElementById('filterStatusPoint');
-  
-  if (pushBtn) pushBtn.addEventListener('click', pushToSheets);
-  if (pullBtn) pullBtn.addEventListener('click', fetchDataFromSheets);
-  if (testBtn) testBtn.addEventListener('click', testConnection);
-  if (refreshBtn) refreshBtn.addEventListener('click', fetchDataFromSheets);
-  if (saveApiBtn) saveApiBtn.addEventListener('click', () => { showToast('Konfigurasi disimpan', 'success'); });
   if (resetDataBtn) resetDataBtn.addEventListener('click', resetToDefault);
-  if (logoutBtn) logoutBtn.addEventListener('click', logout);
-  if (searchPoint) searchPoint.addEventListener('input', () => renderTable());
-  if (filterKec) filterKec.addEventListener('change', () => renderTable());
-  if (filterStatus) filterStatus.addEventListener('change', () => renderTable());
   
-  if (changePassBtn) {
-    changePassBtn.addEventListener('click', () => {
+  const changePasswordBtn = document.getElementById('changePasswordBtn');
+  if (changePasswordBtn) {
+    changePasswordBtn.addEventListener('click', () => {
       const oldPass = document.getElementById('oldPassword').value;
       const newPass = document.getElementById('newPassword').value;
       const confirmPass = document.getElementById('confirmPassword').value;
@@ -509,30 +526,123 @@ function initEventListeners() {
         showToast('Semua field password harus diisi!', 'error');
         return;
       }
-      if (newPass !== confirmPass) {
-        showToast('Password baru tidak cocok!', 'error');
-        return;
-      }
-      if (newPass.length < 6) {
-        showToast('Password minimal 6 karakter!', 'error');
-        return;
-      }
       
-      ADMIN_CREDENTIALS.passwordHash = btoa(newPass);
-      localStorage.setItem('adminPasswordHash', btoa(newPass));
-      showToast('Password berhasil diubah!', 'success');
+      changePassword(oldPass, newPass, confirmPass);
       
+      // Clear password fields
       document.getElementById('oldPassword').value = '';
       document.getElementById('newPassword').value = '';
       document.getElementById('confirmPassword').value = '';
     });
   }
   
+  const searchPoint = document.getElementById('searchPoint');
+  if (searchPoint) searchPoint.addEventListener('input', () => renderTable());
+  
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) logoutBtn.addEventListener('click', logout);
+  
   // Close modal on outside click
   window.onclick = (event) => {
     const modal = document.getElementById('pointModal');
     if (event.target === modal && modal) modal.style.display = 'none';
   };
+}
+
+function changePassword(oldPassword, newPassword, confirmPassword) {
+  const encodedOldPassword = btoa(oldPassword);
+  if (encodedOldPassword !== ADMIN_CREDENTIALS.passwordHash) {
+    showToast('Password lama salah!', 'error');
+    return false;
+  }
+  
+  if (newPassword !== confirmPassword) {
+    showToast('Password baru tidak cocok!', 'error');
+    return false;
+  }
+  
+  if (newPassword.length < 6) {
+    showToast('Password minimal 6 karakter!', 'error');
+    return false;
+  }
+  
+  ADMIN_CREDENTIALS.passwordHash = btoa(newPassword);
+  localStorage.setItem('adminPasswordHash', btoa(newPassword));
+  showToast('Password berhasil diubah!', 'success');
+  return true;
+}
+
+function login(username, password) {
+  const encodedPassword = btoa(password);
+  
+  if (username === ADMIN_CREDENTIALS.username && encodedPassword === ADMIN_CREDENTIALS.passwordHash) {
+    isLoggedIn = true;
+    currentAdmin = username;
+    
+    localStorage.setItem('adminLoggedIn', 'true');
+    localStorage.setItem('currentAdmin', username);
+    localStorage.setItem('loginTime', new Date().getTime().toString());
+    
+    showAdminContent();
+    showToast(`Selamat datang, ${username}!`, 'success');
+    return true;
+  }
+  return false;
+}
+
+function logout() {
+  isLoggedIn = false;
+  currentAdmin = null;
+  localStorage.removeItem('adminLoggedIn');
+  localStorage.removeItem('currentAdmin');
+  localStorage.removeItem('loginTime');
+  
+  document.getElementById('adminContent').style.display = 'none';
+  document.getElementById('loginModal').style.display = 'flex';
+  document.getElementById('loginForm').reset();
+  showToast('Anda telah logout', 'info');
+}
+
+function checkLoginStatus() {
+  const savedLogin = localStorage.getItem('adminLoggedIn');
+  const savedAdmin = localStorage.getItem('currentAdmin');
+  const loginTime = localStorage.getItem('loginTime');
+  
+  if (savedLogin === 'true' && savedAdmin && loginTime) {
+    const now = new Date().getTime();
+    const loginTimeNum = parseInt(loginTime);
+    const eightHours = 8 * 60 * 60 * 1000;
+    
+    if (now - loginTimeNum < eightHours) {
+      isLoggedIn = true;
+      currentAdmin = savedAdmin;
+      showAdminContent();
+      return true;
+    } else {
+      logout();
+      return false;
+    }
+  }
+  return false;
+}
+
+function showAdminContent() {
+  document.getElementById('loginModal').style.display = 'none';
+  document.getElementById('adminContent').style.display = 'block';
+  document.getElementById('adminName').textContent = currentAdmin || 'Admin';
+  
+  loadFromLocalStorage();
+  renderAll();
+  initEventListeners();
+}
+
+function showLoginError(message) {
+  const errorDiv = document.getElementById('loginError');
+  errorDiv.textContent = message;
+  errorDiv.style.display = 'block';
+  setTimeout(() => {
+    errorDiv.style.display = 'none';
+  }, 3000);
 }
 
 // ========== INITIALIZATION ==========
@@ -545,9 +655,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!checkLoginStatus()) {
     document.getElementById('loginModal').style.display = 'flex';
     document.getElementById('adminContent').style.display = 'none';
-  } else {
-    document.getElementById('loginModal').style.display = 'none';
-    document.getElementById('adminContent').style.display = 'block';
   }
   
   const loginForm = document.getElementById('loginForm');
@@ -556,19 +663,26 @@ document.addEventListener('DOMContentLoaded', () => {
       e.preventDefault();
       const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
-      const errorDiv = document.getElementById('loginError');
       
       if (login(username, password)) {
         document.getElementById('loginForm').reset();
-        errorDiv.style.display = 'none';
       } else {
-        errorDiv.textContent = 'Username atau password salah!';
-        errorDiv.style.display = 'block';
+        showLoginError('Username atau password salah!');
+      }
+    });
+  }
+  
+  const passwordInput = document.getElementById('loginPassword');
+  if (passwordInput) {
+    passwordInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('loginForm').dispatchEvent(new Event('submit'));
       }
     });
   }
 });
 
-// Global functions for onclick
+// Make functions global for onclick
 window.editPoint = editPoint;
 window.deletePoint = deletePoint;
