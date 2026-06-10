@@ -1,5 +1,5 @@
 // ============================================
-// ADMIN PANEL -
+// ADMIN PANEL
 // ============================================
 
 let API_URL = 'https://script.google.com/macros/s/AKfycbxWL_zJ-TML_497iusMCgSPdgWsUWe0XqrcTJb_f-w-Ob0hAVbTSisWrd-EPAWLpTps_w/exec';
@@ -43,6 +43,10 @@ function initMobileSidebar() {
         if (window.innerWidth >= 768) {
             sidebar.classList.remove('open');
             overlay.classList.remove('active');
+        }
+        // Resize chart saat window diubah ukurannya
+        if (statusChart) {
+            statusChart.resize();
         }
     });
 }
@@ -104,7 +108,9 @@ document.querySelectorAll('.menu-item').forEach(item => {
         
         // Refresh chart saat dashboard dibuka
         if (page === 'dashboard') {
-            renderChart();
+            setTimeout(() => {
+                renderChart();
+            }, 100);
         }
     });
 });
@@ -210,21 +216,27 @@ function renderDashboard() {
     }
 }
 
-// ========== CHART JS ==========
+// ========== CHART JS - Responsive untuk mobile ==========
 function renderChart() {
     const blank = pointsData.filter(p => p.status === 'blank').length;
     const lemah = pointsData.filter(p => p.status === 'lemah').length;
     const sedang = pointsData.filter(p => p.status === 'sedang').length;
     const baik = pointsData.filter(p => p.status === 'baik').length;
     
-    const ctx = document.getElementById('statusChart').getContext('2d');
+    const ctx = document.getElementById('statusChart');
+    if (!ctx) return;
+    
+    const ctx2d = ctx.getContext('2d');
     
     // Destroy existing chart if exists
     if (statusChart) {
         statusChart.destroy();
     }
     
-    statusChart = new Chart(ctx, {
+    // Deteksi ukuran layar untuk responsive font
+    const isMobile = window.innerWidth < 768;
+    
+    statusChart = new Chart(ctx2d, {
         type: 'bar',
         data: {
             labels: ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'],
@@ -233,17 +245,34 @@ function renderChart() {
                 data: [blank, lemah, sedang, baik],
                 backgroundColor: ['#dc2626', '#d97706', '#ea580c', '#059669'],
                 borderRadius: 8,
-                borderWidth: 0
+                borderWidth: 0,
+                barPercentage: isMobile ? 0.7 : 0.8,
+                categoryPercentage: isMobile ? 0.8 : 0.9
             }]
         },
         options: {
             responsive: true,
             maintainAspectRatio: true,
+            resizeDelay: 100,
             plugins: {
                 legend: {
-                    position: 'top',
+                    position: isMobile ? 'top' : 'top',
+                    labels: {
+                        font: {
+                            size: isMobile ? 10 : 12,
+                            family: 'Inter'
+                        },
+                        boxWidth: isMobile ? 10 : 12,
+                        padding: isMobile ? 8 : 10
+                    }
                 },
                 tooltip: {
+                    bodyFont: {
+                        size: isMobile ? 11 : 12
+                    },
+                    titleFont: {
+                        size: isMobile ? 11 : 12
+                    },
                     callbacks: {
                         label: function(context) {
                             return `${context.raw} titik`;
@@ -256,18 +285,49 @@ function renderChart() {
                     beginAtZero: true,
                     ticks: {
                         stepSize: 1,
-                        precision: 0
+                        precision: 0,
+                        font: {
+                            size: isMobile ? 9 : 11
+                        }
                     },
                     title: {
-                        display: true,
-                        text: 'Jumlah Titik'
+                        display: !isMobile,
+                        text: 'Jumlah Titik',
+                        font: {
+                            size: isMobile ? 9 : 11
+                        }
+                    },
+                    grid: {
+                        drawBorder: true,
+                        color: '#e2e8f0'
                     }
                 },
                 x: {
+                    ticks: {
+                        font: {
+                            size: isMobile ? 9 : 11
+                        },
+                        maxRotation: isMobile ? 30 : 0,
+                        minRotation: isMobile ? 20 : 0
+                    },
                     title: {
-                        display: true,
-                        text: 'Status Sinyal'
+                        display: !isMobile,
+                        text: 'Status Sinyal',
+                        font: {
+                            size: isMobile ? 9 : 11
+                        }
+                    },
+                    grid: {
+                        display: false
                     }
+                }
+            },
+            layout: {
+                padding: {
+                    left: isMobile ? 5 : 10,
+                    right: isMobile ? 5 : 10,
+                    top: isMobile ? 10 : 15,
+                    bottom: isMobile ? 5 : 10
                 }
             }
         }
@@ -339,7 +399,7 @@ function renderTable() {
         if (!tbody) return;
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada数据</td></tr>';
             return;
         }
         
@@ -754,6 +814,13 @@ function initEventListeners() {
         const modal = document.getElementById('pointModal');
         if (e.target === modal) {
             modal.style.display = 'none';
+        }
+    });
+    
+    // Tambahkan event listener untuk resize window
+    window.addEventListener('resize', () => {
+        if (statusChart) {
+            statusChart.resize();
         }
     });
 }
