@@ -81,13 +81,15 @@
                 <div class="stat-card"><h4>Cakupan Baik</h4><div class="number">0</div></div>
             </div>
             
-            <!-- GRAFIK CHART -->
-            <div class="card">
+            <!-- GRAFIK CHART - Responsive untuk mobile -->
+            <div class="card chart-card">
                 <div class="card-header">
                     <h3>Grafik Status Sinyal</h3>
                     <button class="btn-outline" id="refreshChartBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
-                <canvas id="statusChart" style="width:100%; max-height: 300px;"></canvas>
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
             </div>
             
             <div class="card">
