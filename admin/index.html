@@ -6,6 +6,10 @@
     <title>Admin SIG Blank Spot - Bojonegoro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- Chart.js untuk grafik -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- SheetJS untuk export Excel -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="admin.css">
 </head>
 <body>
@@ -29,7 +33,7 @@
 
 <!-- HALAMAN ADMIN -->
 <div id="adminApp" style="display:none">
-    <!-- SIDEBAR OVERLAY (mobile) -->
+    <!-- SIDEBAR OVERLAY (hanya untuk mobile) -->
     <div id="sidebarOverlay" class="sidebar-overlay"></div>
     
     <!-- SIDEBAR -->
@@ -76,10 +80,23 @@
                 <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number">0</div></div>
                 <div class="stat-card"><h4>Cakupan Baik</h4><div class="number">0</div></div>
             </div>
+            
+            <!-- GRAFIK CHART -->
+            <div class="card">
+                <div class="card-header">
+                    <h3>Grafik Status Sinyal</h3>
+                    <button class="btn-outline" id="refreshChartBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                <canvas id="statusChart" style="width:100%; max-height: 300px;"></canvas>
+            </div>
+            
             <div class="card">
                 <div class="card-header">
                     <h3>Ringkasan Data</h3>
-                    <button class="btn-outline" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                    <div class="actions">
+                        <button class="btn-outline" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <button class="btn-primary" id="exportExcelBtn"><i class="fas fa-file-excel"></i> Export Excel</button>
+                    </div>
                 </div>
             </div>
         </div>
