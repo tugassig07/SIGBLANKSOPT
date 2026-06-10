@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
     <title>Admin SIG Blank Spot - Bojonegoro</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
@@ -29,8 +29,11 @@
 
 <!-- HALAMAN ADMIN -->
 <div id="adminApp" style="display:none">
+    <!-- SIDEBAR OVERLAY (mobile) -->
+    <div id="sidebarOverlay" class="sidebar-overlay"></div>
+    
     <!-- SIDEBAR -->
-    <div class="sidebar">
+    <div id="sidebar" class="sidebar">
         <div class="sidebar-header">
             <i class="fas fa-chart-line"></i>
             <span>Admin SIG</span>
@@ -55,6 +58,9 @@
     <!-- MAIN CONTENT -->
     <div class="main-content">
         <div class="top-bar">
+            <button id="menuToggle" class="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
             <h2 id="pageTitle">Dashboard</h2>
             <div class="user-info">
                 <i class="fas fa-user-shield"></i> <span id="adminName">Admin</span>
@@ -86,16 +92,16 @@
                     <div class="actions">
                         <input type="text" id="searchInput" placeholder="Cari dusun/desa..." class="search-box">
                         <button class="btn-primary" id="addPointBtn"><i class="fas fa-plus"></i> Tambah</button>
-                        <button class="btn-outline" id="refreshPointsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                        <button class="btn-outline" id="refreshPointsBtn"><i class="fas fa-sync-alt"></i></button>
                     </div>
                 </div>
-                <div style="overflow-x:auto">
+                <div class="table-wrapper">
                     <table class="data-table">
                         <thead>
                             <tr><th>ID</th><th>Dusun</th><th>Desa</th><th>Kecamatan</th><th>Status</th><th>Populasi</th><th>Provider</th><th>Aksi</th></tr>
                         </thead>
                         <tbody id="pointsTableBody">
-                            <tr><td colspan="8" style="text-align:center">Loading data...</td><span class="citation-embed" data-citation="3"></span>
+                            <tr><td colspan="8" style="text-align:center">Loading data...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -111,9 +117,9 @@
                     <p>Last Sync: <span id="lastSyncTime">-</span></p>
                 </div>
                 <div class="sync-buttons">
-                    <button class="btn-primary" id="testConnBtn"><i class="fas fa-plug"></i> Test Connection</button>
-                    <button class="btn-primary" id="pullDataBtn"><i class="fas fa-download"></i> Pull Data</button>
-                    <button class="btn-primary" id="pushDataBtn"><i class="fas fa-upload"></i> Push Data</button>
+                    <button class="btn-primary" id="testConnBtn"><i class="fas fa-plug"></i> Test</button>
+                    <button class="btn-primary" id="pullDataBtn"><i class="fas fa-download"></i> Pull</button>
+                    <button class="btn-primary" id="pushDataBtn"><i class="fas fa-upload"></i> Push</button>
                 </div>
                 <div class="log-box">
                     <h4>Log Aktivitas</h4>
@@ -128,7 +134,7 @@
                 <h3>Konfigurasi API</h3>
                 <div class="form-group">
                     <label>Google Apps Script URL</label>
-                    <input type="text" id="apiUrlInput" class="form-control" value="https://script.google.com/macros/s/AKfycbysTozpdNCnONuBs7XkoG3pCsnHNDyt6ZMDCXqg3tQ64iGqfjEhTWfa7mcDrdm76ftZ/exec">
+                    <input type="text" id="apiUrlInput" class="form-control">
                     <button class="btn-primary" id="saveApiBtn" style="margin-top:10px">Simpan</button>
                 </div>
                 <hr>
