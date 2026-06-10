@@ -7,6 +7,37 @@ let pointsData = [];
 let isLoading = false;
 let renderTimeout = null;
 
+// ========== MOBILE SIDEBAR ==========
+function initMobileSidebar() {
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    
+    if (menuToggle) {
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+        });
+    }
+    
+    if (overlay) {
+        overlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        });
+    }
+    
+    // Tutup sidebar setelah klik menu (di mobile)
+    document.querySelectorAll('.menu-item').forEach(item => {
+        item.addEventListener('click', () => {
+            if (window.innerWidth < 768) {
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+            }
+        });
+    });
+}
+
 // ========== LOGIN ==========
 function checkLogin() {
     const saved = localStorage.getItem('adminLogged');
@@ -127,9 +158,8 @@ async function loadDataFromSheets(showLog = true) {
                 elev: item.elev || 0,
                 ket: item.ket || ''
             }));
-            // Urutkan berdasarkan ID
             pointsData.sort((a, b) => a.id - b.id);
-            if (showLog) addLog(`✅ ${pointsData.length} data (ID 1-${pointsData.length})`, 'success');
+            if (showLog) addLog(`✅ ${pointsData.length} data`, 'success');
         } else {
             pointsData = [];
             if (showLog) addLog('📭 Data kosong', 'info');
@@ -179,7 +209,7 @@ function renderTable() {
         if (!tbody) return;
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
             return;
         }
         
@@ -241,7 +271,7 @@ async function addPoint(data) {
         const result = await callApi('add', data);
         
         if (result.success) {
-            addLog(`✅ "${data.dusun}" berhasil ditambahkan (ID: ${result.data.id})`, 'success');
+            addLog(`✅ "${data.dusun}" berhasil ditambahkan`, 'success');
             await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
@@ -314,7 +344,7 @@ async function updatePoint(id, data) {
 }
 
 async function deletePoint(id) {
-    if (!confirm('⚠️ Hapus titik ini? ID akan otomatis diurutkan ulang.')) return;
+    if (!confirm('⚠️ Hapus titik ini?')) return;
     
     const point = pointsData.find(p => p.id === id);
     const pointName = point?.dusun || `ID ${id}`;
@@ -324,7 +354,7 @@ async function deletePoint(id) {
         const result = await callApi('delete', null, id);
         
         if (result.success) {
-            addLog(`✅ "${pointName}" berhasil dihapus (ID akan diurutkan ulang)`, 'success');
+            addLog(`✅ "${pointName}" berhasil dihapus`, 'success');
             await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
@@ -338,7 +368,6 @@ async function deletePoint(id) {
     return true;
 }
 
-// ========== RE-INDEX FUNCTION ==========
 async function reindexData() {
     addLog('🔄 Mengurutkan ulang ID...', 'info');
     
@@ -369,7 +398,7 @@ async function testConnection() {
         const result = await callApi('test');
         
         if (result.success) {
-            addLog(`✅ Connection OK! (${result.data.rowCount} records)`, 'success');
+            addLog(`✅ Connection OK!`, 'success');
             if (connStatus) {
                 connStatus.innerHTML = '✅ Terhubung';
                 connStatus.style.background = '#d1fae5';
@@ -425,7 +454,6 @@ async function pushData() {
     }
 }
 
-// ========== SAMPLE DATA ==========
 async function addSampleData() {
     const samples = [
         { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel' },
@@ -442,7 +470,6 @@ async function addSampleData() {
     addLog(`✅ ${samples.length} sample data ditambahkan`, 'success');
 }
 
-// ========== SETTINGS ==========
 function saveApiConfig() {
     const newUrl = document.getElementById('apiUrlInput').value;
     if (newUrl && newUrl.trim()) {
@@ -574,7 +601,6 @@ function initEventListeners() {
         sampleDataBtn.addEventListener('click', addSampleData);
     }
     
-    // Tambah tombol Re-index jika diperlukan
     const reindexBtn = document.getElementById('reindexBtn');
     if (reindexBtn) {
         reindexBtn.addEventListener('click', reindexData);
@@ -594,6 +620,7 @@ if (savedUrl) API_URL = savedUrl;
 const apiUrlInput = document.getElementById('apiUrlInput');
 if (apiUrlInput) apiUrlInput.value = API_URL;
 
+initMobileSidebar();
 initEventListeners();
 
 if (!checkLogin()) {
