@@ -204,6 +204,25 @@ body {
     font-weight: bold;
 }
 
+/* ========== CHART RESPONSIVE ========== */
+.chart-card {
+    padding: 16px;
+}
+
+.chart-container {
+    position: relative;
+    width: 100%;
+    min-height: 250px;
+    max-height: 350px;
+    margin: 0 auto;
+}
+
+#statusChart {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 300px;
+}
+
 /* ========== CARDS ========== */
 .card {
     background: white;
@@ -428,12 +447,6 @@ hr {
     border-color: #e2e8f0;
 }
 
-/* Chart container */
-canvas {
-    max-height: 300px;
-    width: 100%;
-}
-
 /* ========== RESPONSIVE MOBILE ========== */
 @media (max-width: 768px) {
     /* Sidebar jadi overlay di mobile */
@@ -520,6 +533,25 @@ canvas {
         font-size: 11px;
     }
     
+    /* CHART - perbaikan untuk mobile */
+    .chart-card {
+        padding: 12px;
+    }
+    
+    .chart-container {
+        min-height: 200px;
+        max-height: 260px;
+    }
+    
+    #statusChart {
+        max-height: 220px !important;
+    }
+    
+    /* Perkecil font legend chart di mobile */
+    canvas {
+        font-size: 10px;
+    }
+    
     /* Card header vertical di mobile */
     .card-header {
         flex-direction: column;
@@ -571,5 +603,9 @@ canvas {
     .main-content {
         margin-left: 220px;
         padding: 20px;
+    }
+    
+    .chart-container {
+        max-height: 280px;
     }
 }
