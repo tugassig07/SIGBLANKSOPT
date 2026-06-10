@@ -1,11 +1,12 @@
 // ============================================
-// ADMIN PANEL 
+// ADMIN PANEL -
 // ============================================
 
 let API_URL = 'https://script.google.com/macros/s/AKfycbxWL_zJ-TML_497iusMCgSPdgWsUWe0XqrcTJb_f-w-Ob0hAVbTSisWrd-EPAWLpTps_w/exec';
 let pointsData = [];
 let isLoading = false;
 let renderTimeout = null;
+let statusChart = null; // Untuk menyimpan instance chart
 
 // ========== MOBILE SIDEBAR ==========
 function initMobileSidebar() {
@@ -35,6 +36,14 @@ function initMobileSidebar() {
                 overlay.classList.remove('active');
             }
         });
+    });
+    
+    // Resize handler: jika window di-resize ke desktop, pastikan sidebar tidak dalam state open
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768) {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+        }
     });
 }
 
@@ -92,6 +101,11 @@ document.querySelectorAll('.menu-item').forEach(item => {
             page === 'dashboard' ? 'Dashboard' :
             page === 'points' ? 'Kelola Titik' :
             page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
+        
+        // Refresh chart saat dashboard dibuka
+        if (page === 'dashboard') {
+            renderChart();
+        }
     });
 });
 
@@ -171,6 +185,7 @@ async function loadDataFromSheets(showLog = true) {
     
     renderDashboard();
     renderTable();
+    renderChart();
     updateLastSync();
     isLoading = false;
 }
@@ -193,6 +208,121 @@ function renderDashboard() {
             <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
         `;
     }
+}
+
+// ========== CHART JS ==========
+function renderChart() {
+    const blank = pointsData.filter(p => p.status === 'blank').length;
+    const lemah = pointsData.filter(p => p.status === 'lemah').length;
+    const sedang = pointsData.filter(p => p.status === 'sedang').length;
+    const baik = pointsData.filter(p => p.status === 'baik').length;
+    
+    const ctx = document.getElementById('statusChart').getContext('2d');
+    
+    // Destroy existing chart if exists
+    if (statusChart) {
+        statusChart.destroy();
+    }
+    
+    statusChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'],
+            datasets: [{
+                label: 'Jumlah Titik',
+                data: [blank, lemah, sedang, baik],
+                backgroundColor: ['#dc2626', '#d97706', '#ea580c', '#059669'],
+                borderRadius: 8,
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.raw} titik`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
+                    },
+                    title: {
+                        display: true,
+                        text: 'Jumlah Titik'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Status Sinyal'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// ========== EXPORT EXCEL ==========
+function exportToExcel() {
+    if (pointsData.length === 0) {
+        addLog('⚠️ Tidak ada data untuk diexport', 'error');
+        return;
+    }
+    
+    addLog('📊 Mengexport data ke Excel...', 'info');
+    
+    // Prepare data for export
+    const exportData = pointsData.map(p => ({
+        'ID': p.id,
+        'Dusun': p.dusun,
+        'Desa': p.desa,
+        'Kecamatan': p.kec,
+        'Status': p.status === 'blank' ? 'Blank Spot' : p.status === 'lemah' ? 'Sinyal Lemah' : p.status === 'sedang' ? 'Sinyal Sedang' : 'Sinyal Baik',
+        'Latitude': p.lat,
+        'Longitude': p.lng,
+        'Populasi': p.populasi,
+        'Provider': p.provider
+    }));
+    
+    // Create worksheet
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Set column widths
+    ws['!cols'] = [
+        {wch: 5},   // ID
+        {wch: 20},  // Dusun
+        {wch: 20},  // Desa
+        {wch: 15},  // Kecamatan
+        {wch: 15},  // Status
+        {wch: 12},  // Latitude
+        {wch: 12},  // Longitude
+        {wch: 10},  // Populasi
+        {wch: 12}   // Provider
+    ];
+    
+    // Create workbook
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Data Titik Survei');
+    
+    // Generate filename with date
+    const now = new Date();
+    const filename = `SIG_BlankSpot_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}.xlsx`;
+    
+    // Export
+    XLSX.writeFile(wb, filename);
+    addLog(`✅ Export selesai: ${pointsData.length} data`, 'success');
 }
 
 function renderTable() {
@@ -275,6 +405,7 @@ async function addPoint(data) {
             await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
+            renderChart();
         } else {
             throw new Error(result.message || 'Gagal menambahkan');
         }
@@ -328,6 +459,7 @@ async function updatePoint(id, data) {
             await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
+            renderChart();
         } else {
             throw new Error(result.message || 'Gagal mengupdate');
         }
@@ -358,6 +490,7 @@ async function deletePoint(id) {
             await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
+            renderChart();
         } else {
             throw new Error(result.message || 'Gagal menghapus');
         }
@@ -379,6 +512,7 @@ async function reindexData() {
             await loadDataFromSheets(false);
             renderTable();
             renderDashboard();
+            renderChart();
         } else {
             throw new Error(result.message || 'Gagal reindex');
         }
@@ -571,6 +705,16 @@ function initEventListeners() {
         refreshPointsBtn.addEventListener('click', () => loadDataFromSheets(true));
     }
     
+    const refreshChartBtn = document.getElementById('refreshChartBtn');
+    if (refreshChartBtn) {
+        refreshChartBtn.addEventListener('click', () => renderChart());
+    }
+    
+    const exportExcelBtn = document.getElementById('exportExcelBtn');
+    if (exportExcelBtn) {
+        exportExcelBtn.addEventListener('click', exportToExcel);
+    }
+    
     const testConnBtn = document.getElementById('testConnBtn');
     if (testConnBtn) {
         testConnBtn.addEventListener('click', testConnection);
@@ -638,3 +782,4 @@ window.saveApiConfig = saveApiConfig;
 window.changePassword = changePassword;
 window.addSampleData = addSampleData;
 window.reindexData = reindexData;
+window.exportToExcel = exportToExcel;
