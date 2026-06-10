@@ -1,12 +1,12 @@
 // ============================================
-// ADMIN PANEL
+// ADMIN PANEL - 
 // ============================================
 
 let API_URL = 'https://script.google.com/macros/s/AKfycbxWL_zJ-TML_497iusMCgSPdgWsUWe0XqrcTJb_f-w-Ob0hAVbTSisWrd-EPAWLpTps_w/exec';
 let pointsData = [];
 let isLoading = false;
 let renderTimeout = null;
-let statusChart = null; // Untuk menyimpan instance chart
+let statusChart = null;
 
 // ========== MOBILE SIDEBAR ==========
 function initMobileSidebar() {
@@ -28,7 +28,6 @@ function initMobileSidebar() {
         });
     }
     
-    // Tutup sidebar setelah klik menu (di mobile)
     document.querySelectorAll('.menu-item').forEach(item => {
         item.addEventListener('click', () => {
             if (window.innerWidth < 768) {
@@ -38,13 +37,11 @@ function initMobileSidebar() {
         });
     });
     
-    // Resize handler: jika window di-resize ke desktop, pastikan sidebar tidak dalam state open
     window.addEventListener('resize', () => {
         if (window.innerWidth >= 768) {
             sidebar.classList.remove('open');
             overlay.classList.remove('active');
         }
-        // Resize chart saat window diubah ukurannya
         if (statusChart) {
             statusChart.resize();
         }
@@ -106,7 +103,6 @@ document.querySelectorAll('.menu-item').forEach(item => {
             page === 'points' ? 'Kelola Titik' :
             page === 'sync' ? 'Sinkronisasi' : 'Pengaturan';
         
-        // Refresh chart saat dashboard dibuka
         if (page === 'dashboard') {
             setTimeout(() => {
                 renderChart();
@@ -216,7 +212,7 @@ function renderDashboard() {
     }
 }
 
-// ========== CHART JS - Responsive untuk mobile ==========
+// ========== CHART JS - DIPERBAIKI LABELNYA UNTUK MOBILE ==========
 function renderChart() {
     const blank = pointsData.filter(p => p.status === 'blank').length;
     const lemah = pointsData.filter(p => p.status === 'lemah').length;
@@ -228,25 +224,28 @@ function renderChart() {
     
     const ctx2d = ctx.getContext('2d');
     
-    // Destroy existing chart if exists
     if (statusChart) {
         statusChart.destroy();
     }
     
-    // Deteksi ukuran layar untuk responsive font
     const isMobile = window.innerWidth < 768;
+    
+    // Label yang lebih pendek untuk mobile
+    const labels = isMobile 
+        ? ['Blank', 'Lemah', 'Sedang', 'Baik']
+        : ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'];
     
     statusChart = new Chart(ctx2d, {
         type: 'bar',
         data: {
-            labels: ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'],
+            labels: labels,
             datasets: [{
                 label: 'Jumlah Titik',
                 data: [blank, lemah, sedang, baik],
                 backgroundColor: ['#dc2626', '#d97706', '#ea580c', '#059669'],
-                borderRadius: 8,
+                borderRadius: 6,
                 borderWidth: 0,
-                barPercentage: isMobile ? 0.7 : 0.8,
+                barPercentage: isMobile ? 0.6 : 0.7,
                 categoryPercentage: isMobile ? 0.8 : 0.9
             }]
         },
@@ -256,14 +255,17 @@ function renderChart() {
             resizeDelay: 100,
             plugins: {
                 legend: {
-                    position: isMobile ? 'top' : 'top',
+                    position: 'top',
                     labels: {
                         font: {
                             size: isMobile ? 10 : 12,
-                            family: 'Inter'
+                            family: 'Inter',
+                            weight: '500'
                         },
                         boxWidth: isMobile ? 10 : 12,
-                        padding: isMobile ? 8 : 10
+                        padding: isMobile ? 6 : 10,
+                        usePointStyle: true,
+                        pointStyle: 'circle'
                     }
                 },
                 tooltip: {
@@ -271,11 +273,14 @@ function renderChart() {
                         size: isMobile ? 11 : 12
                     },
                     titleFont: {
-                        size: isMobile ? 11 : 12
+                        size: isMobile ? 11 : 12,
+                        weight: 'bold'
                     },
                     callbacks: {
                         label: function(context) {
-                            return `${context.raw} titik`;
+                            const label = context.dataset.label || '';
+                            const value = context.raw;
+                            return `${label}: ${value} titik`;
                         }
                     }
                 }
@@ -288,34 +293,31 @@ function renderChart() {
                         precision: 0,
                         font: {
                             size: isMobile ? 9 : 11
-                        }
-                    },
-                    title: {
-                        display: !isMobile,
-                        text: 'Jumlah Titik',
-                        font: {
-                            size: isMobile ? 9 : 11
+                        },
+                        callback: function(value) {
+                            return value.toString();
                         }
                     },
                     grid: {
                         drawBorder: true,
-                        color: '#e2e8f0'
+                        color: '#e2e8f0',
+                        lineWidth: 0.5
+                    },
+                    title: {
+                        display: false
                     }
                 },
                 x: {
                     ticks: {
                         font: {
-                            size: isMobile ? 9 : 11
+                            size: isMobile ? 10 : 11,
+                            weight: '500',
+                            family: 'Inter'
                         },
-                        maxRotation: isMobile ? 30 : 0,
-                        minRotation: isMobile ? 20 : 0
-                    },
-                    title: {
-                        display: !isMobile,
-                        text: 'Status Sinyal',
-                        font: {
-                            size: isMobile ? 9 : 11
-                        }
+                        maxRotation: isMobile ? 25 : 0,
+                        minRotation: isMobile ? 20 : 0,
+                        autoSkip: true,
+                        padding: isMobile ? 4 : 6
                     },
                     grid: {
                         display: false
@@ -326,8 +328,14 @@ function renderChart() {
                 padding: {
                     left: isMobile ? 5 : 10,
                     right: isMobile ? 5 : 10,
-                    top: isMobile ? 10 : 15,
+                    top: isMobile ? 5 : 10,
                     bottom: isMobile ? 5 : 10
+                }
+            },
+            elements: {
+                bar: {
+                    borderWidth: 0,
+                    borderRadius: 6
                 }
             }
         }
@@ -343,7 +351,6 @@ function exportToExcel() {
     
     addLog('📊 Mengexport data ke Excel...', 'info');
     
-    // Prepare data for export
     const exportData = pointsData.map(p => ({
         'ID': p.id,
         'Dusun': p.dusun,
@@ -356,31 +363,19 @@ function exportToExcel() {
         'Provider': p.provider
     }));
     
-    // Create worksheet
     const ws = XLSX.utils.json_to_sheet(exportData);
     
-    // Set column widths
     ws['!cols'] = [
-        {wch: 5},   // ID
-        {wch: 20},  // Dusun
-        {wch: 20},  // Desa
-        {wch: 15},  // Kecamatan
-        {wch: 15},  // Status
-        {wch: 12},  // Latitude
-        {wch: 12},  // Longitude
-        {wch: 10},  // Populasi
-        {wch: 12}   // Provider
+        {wch: 5}, {wch: 20}, {wch: 20}, {wch: 15}, 
+        {wch: 15}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 12}
     ];
     
-    // Create workbook
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data Titik Survei');
     
-    // Generate filename with date
     const now = new Date();
     const filename = `SIG_BlankSpot_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}.xlsx`;
     
-    // Export
     XLSX.writeFile(wb, filename);
     addLog(`✅ Export selesai: ${pointsData.length} data`, 'success');
 }
@@ -399,9 +394,20 @@ function renderTable() {
         if (!tbody) return;
         
         if (filtered.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada数据</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center">Belum ada data</td></tr>';
             return;
         }
+        
+        // Mapping status ke teks yang lebih pendek untuk mobile
+        const getStatusText = (status) => {
+            switch(status) {
+                case 'blank': return 'BLANK';
+                case 'lemah': return 'LEMAH';
+                case 'sedang': return 'SEDANG';
+                case 'baik': return 'BAIK';
+                default: return status.toUpperCase();
+            }
+        };
         
         tbody.innerHTML = filtered.map(p => `
             <tr>
@@ -409,12 +415,12 @@ function renderTable() {
                 <td>${escapeHtml(p.dusun || '-')}</td>
                 <td>${escapeHtml(p.desa || '-')}</td>
                 <td>${escapeHtml(p.kec || '-')}</td>
-                <td><span class="badge-status badge-${p.status}">${(p.status || 'blank').toUpperCase()}</span></td>
+                <td><span class="badge-status badge-${p.status}">${getStatusText(p.status)}</span></td>
                 <td>${p.populasi || 0}</td>
                 <td>${escapeHtml(p.provider || '-')}</td>
                 <td class="action-icons">
-                    <i class="fas fa-edit" onclick="editPoint(${p.id})" style="cursor:pointer"></i>
-                    <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})" style="cursor:pointer"></i>
+                    <i class="fas fa-edit" onclick="editPoint(${p.id})"></i>
+                    <i class="fas fa-trash-alt" onclick="deletePoint(${p.id})"></i>
                 </td>
             </tr>
         `).join('');
@@ -463,9 +469,6 @@ async function addPoint(data) {
         if (result.success) {
             addLog(`✅ "${data.dusun}" berhasil ditambahkan`, 'success');
             await loadDataFromSheets(false);
-            renderTable();
-            renderDashboard();
-            renderChart();
         } else {
             throw new Error(result.message || 'Gagal menambahkan');
         }
@@ -517,9 +520,6 @@ async function updatePoint(id, data) {
         if (result.success) {
             addLog(`✅ "${data.dusun}" berhasil diupdate`, 'success');
             await loadDataFromSheets(false);
-            renderTable();
-            renderDashboard();
-            renderChart();
         } else {
             throw new Error(result.message || 'Gagal mengupdate');
         }
@@ -548,9 +548,6 @@ async function deletePoint(id) {
         if (result.success) {
             addLog(`✅ "${pointName}" berhasil dihapus`, 'success');
             await loadDataFromSheets(false);
-            renderTable();
-            renderDashboard();
-            renderChart();
         } else {
             throw new Error(result.message || 'Gagal menghapus');
         }
@@ -570,9 +567,6 @@ async function reindexData() {
         if (result.success) {
             addLog('✅ ID berhasil diurutkan ulang', 'success');
             await loadDataFromSheets(false);
-            renderTable();
-            renderDashboard();
-            renderChart();
         } else {
             throw new Error(result.message || 'Gagal reindex');
         }
@@ -817,7 +811,6 @@ function initEventListeners() {
         }
     });
     
-    // Tambahkan event listener untuk resize window
     window.addEventListener('resize', () => {
         if (statusChart) {
             statusChart.resize();
@@ -839,7 +832,6 @@ if (!checkLogin()) {
     document.getElementById('adminApp').style.display = 'none';
 }
 
-// Make functions global
 window.editPoint = editPoint;
 window.deletePoint = deletePoint;
 window.testConnection = testConnection;
