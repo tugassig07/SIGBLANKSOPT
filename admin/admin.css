@@ -91,7 +91,6 @@ body {
 }
 
 /* ========== ADMIN LAYOUT ========== */
-/* Desktop: sidebar tetap terlihat seperti awal */
 .sidebar {
     position: fixed;
     top: 0;
@@ -103,7 +102,6 @@ body {
     padding: 20px;
     border-right: 1px solid #e2e8f0;
     overflow-y: auto;
-    transition: none;
 }
 
 .sidebar-header {
@@ -139,12 +137,10 @@ body {
     color: #dc2626;
 }
 
-/* Overlay hanya untuk mobile, default hidden */
 .sidebar-overlay {
     display: none;
 }
 
-/* Main content - desktop dengan margin left */
 .main-content {
     margin-left: 260px;
     padding: 20px 30px;
@@ -161,7 +157,6 @@ body {
     border: 1px solid #e2e8f0;
 }
 
-/* Menu toggle - sembunyikan di desktop */
 .menu-toggle {
     display: none;
 }
@@ -309,13 +304,25 @@ body {
     color: #00b4d4;
 }
 
+/* ========== BADGE STATUS - DIPERBAIKI UNTUK MOBILE ========== */
 .badge-status {
     display: inline-block;
-    padding: 4px 12px;
+    padding: 4px 8px;
     border-radius: 20px;
-    font-size: 11px;
-    font-weight: bold;
+    font-size: 10px;
+    font-weight: 600;
     white-space: nowrap;
+    text-align: center;
+    min-width: 70px;
+}
+
+/* Ukuran badge lebih kecil di mobile */
+@media (max-width: 768px) {
+    .badge-status {
+        padding: 3px 6px;
+        font-size: 9px;
+        min-width: 60px;
+    }
 }
 
 .badge-blank { background: #fee2e2; color: #dc2626; }
@@ -478,13 +485,11 @@ hr {
         display: block;
     }
     
-    /* Main content full width di mobile */
     .main-content {
         margin-left: 0;
         padding: 15px;
     }
     
-    /* Tampilkan menu toggle di mobile */
     .menu-toggle {
         display: block;
         background: none;
@@ -539,17 +544,12 @@ hr {
     }
     
     .chart-container {
-        min-height: 200px;
+        min-height: 220px;
         max-height: 260px;
     }
     
     #statusChart {
         max-height: 220px !important;
-    }
-    
-    /* Perkecil font legend chart di mobile */
-    canvas {
-        font-size: 10px;
     }
     
     /* Card header vertical di mobile */
@@ -567,19 +567,16 @@ hr {
         flex: 1;
     }
     
-    /* Tombol lebih besar untuk sentuhan */
     .btn-primary, .btn-outline {
         padding: 10px 16px;
         font-size: 13px;
     }
     
-    /* Modal full width di mobile */
     .modal-content {
         width: 95%;
         padding: 20px;
     }
     
-    /* Sync buttons wrap */
     .sync-buttons {
         flex-direction: column;
     }
@@ -588,9 +585,24 @@ hr {
         width: 100%;
         justify-content: center;
     }
+    
+    /* Perbaikan teks tabel di mobile */
+    .data-table th, .data-table td {
+        padding: 8px 6px;
+        font-size: 11px;
+    }
+    
+    .data-table th {
+        font-size: 11px;
+    }
+    
+    .action-icons i {
+        font-size: 14px;
+        margin: 0 3px;
+    }
 }
 
-/* ========== TABLET (768px - 1024px) ========== */
+/* ========== TABLET ========== */
 @media (min-width: 769px) and (max-width: 1024px) {
     .stats-grid {
         grid-template-columns: repeat(3, 1fr);
