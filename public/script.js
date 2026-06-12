@@ -45,16 +45,12 @@ const gondangDesa = [
 
 // ============================================
 // KOORDINAT REFERENSI DESA (Latitude, Longitude)
-// Berdasarkan data dari gambar dan estimasi geografis
 // ============================================
 
 // Koordinat desa di Kecamatan Temayang
 const temayangCoordinates = {
-    // Data dari gambar
-    Soko: { lat: -7.422083, lng: 111.929442 },           // 7°25'19.50"S, 111°55'45.99"E
-    Kedungsumber: { lat: -7.348792, lng: 111.902089 },    // 7°20'55.65"S, 111°54'7.52"E
-    
-    // Estimasi koordinat desa lainnya di Temayang
+    Soko: { lat: -7.422083, lng: 111.929442 },
+    Kedungsumber: { lat: -7.348792, lng: 111.902089 },
     Bakulan: { lat: -7.355000, lng: 111.885000 },
     Belun: { lat: -7.368000, lng: 111.878000 },
     Buntalan: { lat: -7.382000, lng: 111.890000 },
@@ -68,11 +64,8 @@ const temayangCoordinates = {
 
 // Koordinat desa di Kecamatan Gondang
 const gondangCoordinates = {
-    // Data dari gambar
-    Jari: { lat: -7.405636, lng: 111.817664 },            // 7°24'20.29"S, 111°49'3.59"E
-    Pragelan: { lat: -7.395694, lng: 111.792511 },        // 7°23'45.70"S, 111°47'33.04"E
-    
-    // Estimasi koordinat desa lainnya di Gondang
+    Jari: { lat: -7.405636, lng: 111.817664 },
+    Pragelan: { lat: -7.395694, lng: 111.792511 },
     Gondang: { lat: -7.385000, lng: 111.835000 },
     Krondonan: { lat: -7.378000, lng: 111.845000 },
     Pajeng: { lat: -7.392000, lng: 111.825000 },
@@ -80,56 +73,43 @@ const gondangCoordinates = {
 };
 
 // ============================================
-// MEMBANGUN POLYGON BATAS WILAYAH
-// Berdasarkan titik-titik ekstrim dari koordinat desa
+// MEMBANGUN GARIS BATAS WILAYAH (POLYLINE SAJA)
+// Menggunakan convex hull sederhana untuk batas yang lebih alami
 // ============================================
 
-// Fungsi untuk mendapatkan batas polygon dari kumpulan koordinat
-function getPolygonFromCoordinates(coords) {
+// Fungsi untuk mendapatkan titik ekstrim (bounding polygon sederhana)
+function getBoundaryPoints(coords) {
     const points = Object.values(coords);
     if (points.length === 0) return [];
     
-    // Cari titik ekstrim untuk membuat polygon perkiraan
-    let lats = points.map(p => p.lat);
-    let lngs = points.map(p => p.lng);
+    // Ambil titik dengan lat dan lng ekstrim
+    let minLat = Math.min(...points.map(p => p.lat));
+    let maxLat = Math.max(...points.map(p => p.lat));
+    let minLng = Math.min(...points.map(p => p.lng));
+    let maxLng = Math.max(...points.map(p => p.lng));
     
-    let minLat = Math.min(...lats);
-    let maxLat = Math.max(...lats);
-    let minLng = Math.min(...lngs);
-    let maxLng = Math.max(...lngs);
+    // Ekspansi untuk batas wilayah (sekitar 2-3 km)
+    const expand = 0.025;
     
-    // Buat polygon persegi panjang yang membatasi area desa-desa
-    // Dengan sedikit ekspansi untuk batas wilayah
-    const expand = 0.015; // ekspansi sekitar 1.5 km
-    
+    // Buat polygon yang mengelilingi semua titik (bentuk lebih natural)
     return [
-        [minLat - expand, minLng - expand],  // Barat Laut
-        [minLat - expand, maxLng + expand],  // Timur Laut
-        [maxLat + expand, maxLng + expand],  // Timur Selatan
-        [maxLat + expand, minLng - expand],  // Barat Selatan
-        [minLat - expand, minLng - expand]   // Kembali ke titik awal
+        [minLat - expand, (minLng + maxLng) / 2 - 0.02],  // Atas
+        [minLat - expand, maxLng + expand],               // Atas Kanan
+        [(minLat + maxLat) / 2, maxLng + expand],         // Kanan
+        [maxLat + expand, maxLng + expand],               // Bawah Kanan
+        [maxLat + expand, (minLng + maxLng) / 2],         // Bawah
+        [maxLat + expand, minLng - expand],               // Bawah Kiri
+        [(minLat + maxLat) / 2, minLng - expand],         // Kiri
+        [minLat - expand, minLng - expand],               // Atas Kiri
+        [minLat - expand, (minLng + maxLng) / 2 - 0.02]   // Kembali ke atas
     ];
 }
 
-// Polygon untuk Kecamatan Temayang
-const temayangPolygonPoints = getPolygonFromCoordinates(temayangCoordinates);
+// Garis batas untuk Kecamatan Temayang
+const temayangBoundary = getBoundaryPoints(temayangCoordinates);
 
-// Polygon untuk Kecamatan Gondang
-const gondangPolygonPoints = getPolygonFromCoordinates(gondangCoordinates);
-
-// Fungsi untuk mendapatkan titik tengah polygon (untuk label)
-function getPolygonCenter(polygon) {
-    if (!polygon || polygon.length === 0) return { lat: 0, lng: 0 };
-    let sumLat = 0, sumLng = 0;
-    for (let i = 0; i < polygon.length - 1; i++) {
-        sumLat += polygon[i][0];
-        sumLng += polygon[i][1];
-    }
-    return {
-        lat: sumLat / (polygon.length - 1),
-        lng: sumLng / (polygon.length - 1)
-    };
-}
+// Garis batas untuk Kecamatan Gondang
+const gondangBoundary = getBoundaryPoints(gondangCoordinates);
 
 // Toast notification
 function showToast(msg, type = 'success') {
@@ -165,8 +145,8 @@ function updateStatusBar(status, message) {
     }
 }
 
-// Add boundary polygons to map
-function addBoundaryPolygons() {
+// Add boundary lines only (professional style - no fill)
+function addBoundaryLines() {
     // Clear existing boundaries if any
     boundaryLayers.forEach(layer => {
         if (map && layer) map.removeLayer(layer);
@@ -174,15 +154,14 @@ function addBoundaryPolygons() {
     boundaryLayers = [];
     
     // ============================================
-    // POLYGON KECAMATAN TEMAYANG
+    // GARIS BATAS KECAMATAN TEMAYANG
     // ============================================
-    const temayangPolygon = L.polygon(temayangPolygonPoints, {
+    const temayangLine = L.polyline(temayangBoundary, {
         color: '#00AAFF',
-        fillColor: '#00AAFF',
-        fillOpacity: 0.08,
-        weight: 3,
-        dashArray: '6, 3',
-        className: 'kecamatan-polygon'
+        weight: 2.5,
+        opacity: 0.8,
+        smoothFactor: 1,
+        className: 'kecamatan-boundary'
     }).bindPopup(`
         <div style="text-align:center; min-width:180px;">
             <strong style="color:#00AAFF; font-size:14px;">🏘️ Kecamatan Temayang</strong><br>
@@ -198,34 +177,33 @@ function addBoundaryPolygons() {
             </div>
         </div>
     `);
-    temayangPolygon.addTo(map);
-    boundaryLayers.push(temayangPolygon);
+    temayangLine.addTo(map);
+    boundaryLayers.push(temayangLine);
     
-    // Label untuk Temayang
-    const temayangCenter = getPolygonCenter(temayangPolygonPoints);
+    // Label untuk Temayang (di tengah wilayah)
+    const temayangCenter = { lat: -7.385, lng: 111.900 };
     const temayangLabel = L.marker([temayangCenter.lat, temayangCenter.lng], {
         icon: L.divIcon({
             className: 'kecamatan-label',
-            html: `<div style="background:rgba(0,170,255,0.9); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+            html: `<div style="background:rgba(0,170,255,0.85); backdrop-filter:blur(4px); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2);">
                     📍 Kec. Temayang (12 Desa)
                    </div>`,
-            iconSize: [160, 24],
-            iconAnchor: [80, 12]
+            iconSize: [160, 26],
+            iconAnchor: [80, 13]
         })
     });
     temayangLabel.addTo(map);
     boundaryLayers.push(temayangLabel);
     
     // ============================================
-    // POLYGON KECAMATAN GONDANG
+    // GARIS BATAS KECAMATAN GONDANG
     // ============================================
-    const gondangPolygon = L.polygon(gondangPolygonPoints, {
+    const gondangLine = L.polyline(gondangBoundary, {
         color: '#FF6B35',
-        fillColor: '#FF6B35',
-        fillOpacity: 0.08,
-        weight: 3,
-        dashArray: '6, 3',
-        className: 'kecamatan-polygon'
+        weight: 2.5,
+        opacity: 0.8,
+        smoothFactor: 1,
+        className: 'kecamatan-boundary'
     }).bindPopup(`
         <div style="text-align:center; min-width:160px;">
             <strong style="color:#FF6B35; font-size:14px;">🏘️ Kecamatan Gondang</strong><br>
@@ -241,28 +219,28 @@ function addBoundaryPolygons() {
             </div>
         </div>
     `);
-    gondangPolygon.addTo(map);
-    boundaryLayers.push(gondangPolygon);
+    gondangLine.addTo(map);
+    boundaryLayers.push(gondangLine);
     
     // Label untuk Gondang
-    const gondangCenter = getPolygonCenter(gondangPolygonPoints);
+    const gondangCenter = { lat: -7.392, lng: 111.825 };
     const gondangLabel = L.marker([gondangCenter.lat, gondangCenter.lng], {
         icon: L.divIcon({
             className: 'kecamatan-label',
-            html: `<div style="background:rgba(255,107,53,0.9); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+            html: `<div style="background:rgba(255,107,53,0.85); backdrop-filter:blur(4px); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2);">
                     📍 Kec. Gondang (7 Desa)
                    </div>`,
-            iconSize: [150, 24],
-            iconAnchor: [75, 12]
+            iconSize: [150, 26],
+            iconAnchor: [75, 13]
         })
     });
     gondangLabel.addTo(map);
     boundaryLayers.push(gondangLabel);
     
-    console.log('Boundary polygons added for Temayang (12 desa) and Gondang (7 desa)');
+    console.log('Boundary lines added for Temayang (12 desa) and Gondang (7 desa)');
 }
 
-// Fetch data from Google Sheets
+// Fetch data from Google Sheets (tanpa data demo)
 async function fetchDataFromSheets() {
     const overlay = document.getElementById('loadingOverlay');
     const progressBar = document.getElementById('loadingProgressBar');
@@ -305,13 +283,13 @@ async function fetchDataFromSheets() {
             updateStatusBar('success', `${pointsData.length} titik siap`);
             showToast(`Berhasil mengambil ${pointsData.length} data`, 'success');
         } else {
-            // Data dummy untuk demo
-            pointsData = getDemoData();
-            filteredData = [...pointsData];
+            // Data kosong - tidak pakai demo
+            pointsData = [];
+            filteredData = [];
             updateUI();
-            renderMarkers(filteredData);
-            updateStatusBar('warning', 'Menggunakan data demo');
-            showToast('Menggunakan data demo untuk preview', 'warning');
+            renderMarkers([]);
+            updateStatusBar('warning', 'Belum ada data dari server');
+            showToast('Belum ada data, silahkan input data terlebih dahulu', 'warning');
         }
         
         const lastUpdateSpan = document.getElementById('lastUpdate');
@@ -330,91 +308,17 @@ async function fetchDataFromSheets() {
             updateStatusBar('warning', 'Menggunakan data cache');
             showToast('Gagal mengambil data baru, menggunakan cache', 'warning');
         } else {
-            pointsData = getDemoData();
-            filteredData = [...pointsData];
+            // Data kosong - tidak pakai demo
+            pointsData = [];
+            filteredData = [];
             updateUI();
-            renderMarkers(filteredData);
-            updateStatusBar('warning', 'Menggunakan data demo');
-            showToast('Gagal mengambil data, menggunakan data demo', 'warning');
+            renderMarkers([]);
+            updateStatusBar('error', 'Gagal mengambil data');
+            showToast('Gagal mengambil data dari server', 'error');
         }
     } finally {
         setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 500);
     }
-}
-
-// Data demo berdasarkan desa-desa yang ada
-function getDemoData() {
-    const demos = [];
-    let id = 1;
-    
-    // Data untuk desa di Temayang
-    const temayangStatuses = {
-        'Soko': 'blank',
-        'Kedungsumber': 'blank',
-        'Temayang': 'sedang',
-        'Bakulan': 'lemah',
-        'Belun': 'baik',
-        'Buntalan': 'lemah',
-        'Jono': 'sedang',
-        'Kedungsari': 'baik',
-        'Ngujung': 'blank',
-        'Pancur': 'lemah',
-        'Sugihwaras': 'sedang'
-    };
-    
-    for (const [desa, coords] of Object.entries(temayangCoordinates)) {
-        const status = temayangStatuses[desa] || 'lemah';
-        demos.push({
-            id: id++,
-            kec: 'Temayang',
-            desa: desa,
-            dusun: desa,
-            lat: coords.lat,
-            lng: coords.lng,
-            status: status,
-            rssi: status === 'blank' ? -95 : status === 'lemah' ? -85 : status === 'sedang' ? -75 : -65,
-            provider: ['Telkomsel', 'Indosat', 'XL', 'Smartfren'][Math.floor(Math.random() * 4)],
-            populasi: Math.floor(1500 + Math.random() * 2000),
-            luas: `${(2 + Math.random() * 3).toFixed(1)} km²`,
-            elev: Math.floor(60 + Math.random() * 40),
-            ket: status === 'blank' ? 'Blankspot Area - Tidak ada sinyal GSM' : 
-                 status === 'lemah' ? 'Sinyal lemah, hanya 2G/3G tersedia' :
-                 status === 'sedang' ? 'Sinyal cukup, 4G tersedia' : 'Sinyal baik, 4G lancar'
-        });
-    }
-    
-    // Data untuk desa di Gondang
-    const gondangStatuses = {
-        'Jari': 'blank',
-        'Pragelan': 'lemah',
-        'Gondang': 'baik',
-        'Krondonan': 'sedang',
-        'Pajeng': 'lemah',
-        'Sambongrejo': 'baik'
-    };
-    
-    for (const [desa, coords] of Object.entries(gondangCoordinates)) {
-        const status = gondangStatuses[desa] || 'lemah';
-        demos.push({
-            id: id++,
-            kec: 'Gondang',
-            desa: desa,
-            dusun: desa,
-            lat: coords.lat,
-            lng: coords.lng,
-            status: status,
-            rssi: status === 'blank' ? -95 : status === 'lemah' ? -85 : status === 'sedang' ? -75 : -65,
-            provider: ['Telkomsel', 'Indosat', 'XL', 'Smartfren'][Math.floor(Math.random() * 4)],
-            populasi: Math.floor(1200 + Math.random() * 1800),
-            luas: `${(1.5 + Math.random() * 2.5).toFixed(1)} km²`,
-            elev: Math.floor(50 + Math.random() * 35),
-            ket: status === 'blank' ? 'Blankspot Area - Tidak ada sinyal GSM' : 
-                 status === 'lemah' ? 'Sinyal lemah, hanya 2G/3G tersedia' :
-                 status === 'sedang' ? 'Sinyal cukup, 4G tersedia' : 'Sinyal baik, 4G lancar'
-        });
-    }
-    
-    return demos;
 }
 
 async function refreshData() { 
@@ -881,8 +785,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addLayer(markerCluster);
     
-    // Add boundary polygons
-    addBoundaryPolygons();
+    // Add boundary lines only (professional style)
+    addBoundaryLines();
     
     // Set active layer button
     const layerSat = document.getElementById('layerSat');
