@@ -11,6 +11,7 @@ let heatLayer = null, heatActive = false;
 let userMarker = null, userCircle = null;
 let activePanel = null, filterKec = 'all', filterStatus = 'all', searchTimeout = null;
 let lastSyncTime = null, isDarkMode = true;
+let boundaryLayers = [];
 
 // Color mapping for status
 const colorMap = { 
@@ -25,6 +26,34 @@ const labelMap = {
     lemah: 'Sinyal Lemah', 
     sedang: 'Sinyal Sedang', 
     baik: 'Sinyal Baik' 
+};
+
+// Kecamatan Boundaries (Polygon coordinates for Temayang and Gondang)
+// These are approximate boundaries based on geographic location of Bojonegoro
+const kecamatanBoundaries = {
+    Temayang: [
+        [-7.285, 111.850],  // Utara Timur
+        [-7.290, 111.870],
+        [-7.305, 111.875],
+        [-7.320, 111.865],
+        [-7.325, 111.850],
+        [-7.318, 111.835],
+        [-7.305, 111.828],
+        [-7.295, 111.830],
+        [-7.285, 111.850]
+    ],
+    Gondang: [
+        [-7.340, 111.810],  // Selatan
+        [-7.348, 111.828],
+        [-7.355, 111.845],
+        [-7.350, 111.860],
+        [-7.335, 111.865],
+        [-7.320, 111.858],
+        [-7.312, 111.842],
+        [-7.318, 111.825],
+        [-7.330, 111.815],
+        [-7.340, 111.810]
+    ]
 };
 
 // Toast notification
@@ -59,6 +88,51 @@ function updateStatusBar(status, message) {
         dot.classList.add('error'); 
         text.innerHTML = '✗ ' + message; 
     }
+}
+
+// Add boundary polygons to map
+function addBoundaryPolygons() {
+    // Clear existing boundaries if any
+    boundaryLayers.forEach(layer => {
+        if (map && layer) map.removeLayer(layer);
+    });
+    boundaryLayers = [];
+    
+    // Add Temayang boundary (Blue)
+    const temayangPolygon = L.polygon(kecamatanBoundaries.Temayang, {
+        color: '#00AAFF',
+        fillColor: '#00AAFF',
+        fillOpacity: 0.08,
+        weight: 3,
+        dashArray: '6, 3',
+        className: 'kecamatan-polygon'
+    }).bindPopup(`
+        <div style="text-align:center;">
+            <strong style="color:#00AAFF;">Kecamatan Temayang</strong><br>
+            <span style="font-size:11px;">Wilayah Administrasi</span>
+        </div>
+    `);
+    temayangPolygon.addTo(map);
+    boundaryLayers.push(temayangPolygon);
+    
+    // Add Gondang boundary (Orange)
+    const gondangPolygon = L.polygon(kecamatanBoundaries.Gondang, {
+        color: '#FF6B35',
+        fillColor: '#FF6B35',
+        fillOpacity: 0.08,
+        weight: 3,
+        dashArray: '6, 3',
+        className: 'kecamatan-polygon'
+    }).bindPopup(`
+        <div style="text-align:center;">
+            <strong style="color:#FF6B35;">Kecamatan Gondang</strong><br>
+            <span style="font-size:11px;">Wilayah Administrasi</span>
+        </div>
+    `);
+    gondangPolygon.addTo(map);
+    boundaryLayers.push(gondangPolygon);
+    
+    console.log('Boundary polygons added for Temayang and Gondang');
 }
 
 // Fetch data from Google Sheets
@@ -157,7 +231,6 @@ function getMarkerColor(status) {
 function createMarkerIcon(status, kec) {
     const color = getMarkerColor(status);
     const size = status === 'blank' ? 32 : 28;
-    const borderColor = kec === 'Temayang' ? '#00AAFF' : '#FF6B35';
     
     const html = `
         <div style="
@@ -436,7 +509,7 @@ function setLayer(name, btn) {
 
 function resetView() { 
     if (map) { 
-        map.setView([-7.200, 111.800], 12); 
+        map.setView([-7.315, 111.840], 12); 
         showToast('Tampilan direset', 'info'); 
     } 
 }
@@ -569,7 +642,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }) 
     };
     
-    map = L.map('map', { zoomControl: false }).setView([-7.200, 111.800], 12);
+    map = L.map('map', { zoomControl: false }).setView([-7.315, 111.840], 12);
     layers.satellite.addTo(map);
     
     markerCluster = L.markerClusterGroup({ 
@@ -593,6 +666,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
     });
     map.addLayer(markerCluster);
+    
+    // Add boundary polygons for Temayang and Gondang
+    addBoundaryPolygons();
     
     // Set active layer button
     const layerSat = document.getElementById('layerSat');
