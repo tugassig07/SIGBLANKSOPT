@@ -44,7 +44,7 @@ const gondangDesa = [
 ];
 
 // ============================================
-// KOORDINAT DESA (Titik referensi untuk membentuk polygon)
+// KOORDINAT DESA (Titik referensi)
 // ============================================
 
 // Koordinat desa di Kecamatan Temayang
@@ -73,73 +73,65 @@ const gondangCoordinates = [
 ];
 
 // ============================================
-// MEMBANGUN POLYGON MENYELURUH (Convex Hull)
+// MEMBUAT POLYGON BULAT (CIRCLE/LINGKARAN)
 // ============================================
 
-// Fungsi untuk menghitung convex hull (Graham Scan)
-// Menghasilkan polygon yang mengelilingi SEMUA titik
-function convexHull(points) {
-    if (points.length < 3) return points.slice();
-    
-    // Clone points
-    let pts = points.map(p => ({ lat: p.lat, lng: p.lng, desa: p.desa }));
-    
-    // Cari titik dengan lat terendah (paling selatan)
-    let start = pts.reduce((min, p) => p.lat < min.lat ? p : min, pts[0]);
-    
-    // Hitung sudut dari titik start
-    function angle(p) {
-        return Math.atan2(p.lat - start.lat, p.lng - start.lng);
+// Fungsi untuk menghitung titik tengah (centroid) dari kumpulan koordinat
+function getCenterPoint(coords) {
+    let sumLat = 0, sumLng = 0;
+    for (let i = 0; i < coords.length; i++) {
+        sumLat += coords[i].lat;
+        sumLng += coords[i].lng;
     }
-    
-    // Sort berdasarkan sudut
-    let sorted = pts.slice();
-    sorted.sort((a, b) => angle(a) - angle(b));
-    
-    // Graham Scan - membangun convex hull
-    let hull = [];
-    for (let i = 0; i < sorted.length; i++) {
-        while (hull.length >= 2) {
-            let a = hull[hull.length - 2];
-            let b = hull[hull.length - 1];
-            let c = sorted[i];
-            let cross = (b.lng - a.lng) * (c.lat - a.lat) - (b.lat - a.lat) * (c.lng - a.lng);
-            if (cross <= 0) break;
-            hull.pop();
-        }
-        hull.push(sorted[i]);
-    }
-    
-    return hull;
+    return {
+        lat: sumLat / coords.length,
+        lng: sumLng / coords.length
+    };
 }
 
-// Fungsi untuk memperluas polygon (membuat batas wilayah)
-function expandPolygon(points, expansionKm = 2.0) {
-    if (points.length < 3) return points;
-    
-    // Konversi km ke derajat (1 derajat ≈ 111 km)
-    const expansionDeg = expansionKm / 111;
-    
-    // Hitung centroid
-    let centerLat = points.reduce((sum, p) => sum + p.lat, 0) / points.length;
-    let centerLng = points.reduce((sum, p) => sum + p.lng, 0) / points.length;
-    
-    // Ekspansi setiap titik menjauh dari centroid
-    return points.map(p => ({
-        lat: centerLat + (p.lat - centerLat) * (1 + expansionDeg * 2.5),
-        lng: centerLng + (p.lng - centerLng) * (1 + expansionDeg * 2.5)
-    }));
+// Fungsi untuk menghitung radius (jarak terjauh dari center ke titik desa)
+function getRadius(coords, center) {
+    let maxDistance = 0;
+    for (let i = 0; i < coords.length; i++) {
+        const dlat = (coords[i].lat - center.lat) * 111; // konversi ke km
+        const dlng = (coords[i].lng - center.lng) * 111 * Math.cos(center.lat * Math.PI / 180);
+        const distance = Math.sqrt(dlat * dlat + dlng * dlng);
+        if (distance > maxDistance) maxDistance = distance;
+    }
+    return maxDistance + 2.5; // tambah 2.5 km untuk batas wilayah
 }
 
-// Bangun polygon menyeluruh untuk Temayang
-let temayangHull = convexHull(temayangCoordinates);
-temayangHull = expandPolygon(temayangHull, 2.2);
-const temayangPolygonPoints = temayangHull.map(p => [p.lat, p.lng]);
+// Fungsi untuk membuat polygon lingkaran (circle approximation dengan banyak titik)
+function createCirclePolygon(center, radiusKm, points = 64) {
+    const polygon = [];
+    const earthRadius = 6371; // km
+    const radiusRad = radiusKm / earthRadius;
+    const centerLatRad = center.lat * Math.PI / 180;
+    const centerLngRad = center.lng * Math.PI / 180;
+    
+    for (let i = 0; i <= points; i++) {
+        const angle = 2 * Math.PI * i / points;
+        const latRad = Math.asin(Math.sin(centerLatRad) * Math.cos(radiusRad) + 
+                                 Math.cos(centerLatRad) * Math.sin(radiusRad) * Math.cos(angle));
+        const lngRad = centerLngRad + Math.atan2(Math.sin(angle) * Math.sin(radiusRad) * Math.cos(centerLatRad),
+                                                   Math.cos(radiusRad) - Math.sin(centerLatRad) * Math.sin(latRad));
+        polygon.push([latRad * 180 / Math.PI, lngRad * 180 / Math.PI]);
+    }
+    return polygon;
+}
 
-// Bangun polygon menyeluruh untuk Gondang
-let gondangHull = convexHull(gondangCoordinates);
-gondangHull = expandPolygon(gondangHull, 2.0);
-const gondangPolygonPoints = gondangHull.map(p => [p.lat, p.lng]);
+// Hitung center dan radius untuk Temayang
+const temayangCenter = getCenterPoint(temayangCoordinates);
+const temayangRadius = getRadius(temayangCoordinates, temayangCenter);
+const temayangCirclePoints = createCirclePolygon(temayangCenter, temayangRadius, 72);
+
+// Hitung center dan radius untuk Gondang
+const gondangCenter = getCenterPoint(gondangCoordinates);
+const gondangRadius = getRadius(gondangCoordinates, gondangCenter);
+const gondangCirclePoints = createCirclePolygon(gondangCenter, gondangRadius, 72);
+
+console.log('Temayang Center:', temayangCenter, 'Radius:', temayangRadius, 'km');
+console.log('Gondang Center:', gondangCenter, 'Radius:', gondangRadius, 'km');
 
 // Toast notification
 function showToast(msg, type = 'success') {
@@ -175,21 +167,7 @@ function updateStatusBar(status, message) {
     }
 }
 
-// Fungsi untuk mendapatkan titik tengah polygon
-function getPolygonCenter(points) {
-    if (!points || points.length === 0) return { lat: 0, lng: 0 };
-    let sumLat = 0, sumLng = 0;
-    for (let i = 0; i < points.length; i++) {
-        sumLat += points[i][0];
-        sumLng += points[i][1];
-    }
-    return {
-        lat: sumLat / points.length,
-        lng: sumLng / points.length
-    };
-}
-
-// Add boundary polygons (menyeluruh)
+// Add circular boundary polygons
 function addBoundaryPolygons() {
     // Clear existing boundaries if any
     boundaryLayers.forEach(layer => {
@@ -198,16 +176,16 @@ function addBoundaryPolygons() {
     boundaryLayers = [];
     
     // ============================================
-    // POLYGON MENYELURUH KECAMATAN TEMAYANG
+    // LINGKARAN WILAYAH KECAMATAN TEMAYANG
     // ============================================
-    const temayangPolygon = L.polygon(temayangPolygonPoints, {
+    const temayangCircle = L.polygon(temayangCirclePoints, {
         color: '#00AAFF',
         fillColor: '#00AAFF',
         fillOpacity: 0.08,
         weight: 2.5,
         opacity: 0.9,
         smoothFactor: 0.5,
-        className: 'kecamatan-polygon'
+        className: 'kecamatan-circle'
     }).bindPopup(`
         <div style="text-align:left; min-width:220px; max-width:280px;">
             <div style="text-align:center; border-bottom:2px solid #00AAFF; padding-bottom:10px; margin-bottom:12px;">
@@ -223,19 +201,18 @@ function addBoundaryPolygons() {
                 ${temayangDesa.map(desa => `<div style="padding:5px 4px; border-bottom:1px solid rgba(0,170,255,0.15);">📍 ${desa}</div>`).join('')}
             </div>
             <div style="margin-top:12px; padding-top:8px; border-top:1px solid rgba(0,170,255,0.3); font-size:10px; color:#888; text-align:center;">
-                Klik di luar popup untuk menutup
+                Jari-jari wilayah: ~${temayangRadius.toFixed(1)} km
             </div>
         </div>
     `);
-    temayangPolygon.addTo(map);
-    boundaryLayers.push(temayangPolygon);
+    temayangCircle.addTo(map);
+    boundaryLayers.push(temayangCircle);
     
-    // Label untuk Temayang (di tengah polygon)
-    const temayangCenter = getPolygonCenter(temayangPolygonPoints);
+    // Label untuk Temayang (di tengah lingkaran)
     const temayangLabel = L.marker([temayangCenter.lat, temayangCenter.lng], {
         icon: L.divIcon({
             className: 'kecamatan-label',
-            html: `<div style="background:rgba(0,170,255,0.9); backdrop-filter:blur(4px); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 12px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.25); letter-spacing:0.5px;">
+            html: `<div style="background:rgba(0,170,255,0.9); backdrop-filter:blur(4px); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 12px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.25);">
                     📍 KECAMATAN TEMAYANG
                    </div>`,
             iconSize: [180, 30],
@@ -246,16 +223,16 @@ function addBoundaryPolygons() {
     boundaryLayers.push(temayangLabel);
     
     // ============================================
-    // POLYGON MENYELURUH KECAMATAN GONDANG
+    // LINGKARAN WILAYAH KECAMATAN GONDANG
     // ============================================
-    const gondangPolygon = L.polygon(gondangPolygonPoints, {
+    const gondangCircle = L.polygon(gondangCirclePoints, {
         color: '#FF6B35',
         fillColor: '#FF6B35',
         fillOpacity: 0.08,
         weight: 2.5,
         opacity: 0.9,
         smoothFactor: 0.5,
-        className: 'kecamatan-polygon'
+        className: 'kecamatan-circle'
     }).bindPopup(`
         <div style="text-align:left; min-width:200px; max-width:250px;">
             <div style="text-align:center; border-bottom:2px solid #FF6B35; padding-bottom:10px; margin-bottom:12px;">
@@ -271,19 +248,18 @@ function addBoundaryPolygons() {
                 ${gondangDesa.map(desa => `<div style="padding:5px 4px; border-bottom:1px solid rgba(255,107,53,0.15);">📍 ${desa}</div>`).join('')}
             </div>
             <div style="margin-top:12px; padding-top:8px; border-top:1px solid rgba(255,107,53,0.3); font-size:10px; color:#888; text-align:center;">
-                Klik di luar popup untuk menutup
+                Jari-jari wilayah: ~${gondangRadius.toFixed(1)} km
             </div>
         </div>
     `);
-    gondangPolygon.addTo(map);
-    boundaryLayers.push(gondangPolygon);
+    gondangCircle.addTo(map);
+    boundaryLayers.push(gondangCircle);
     
-    // Label untuk Gondang (di tengah polygon)
-    const gondangCenter = getPolygonCenter(gondangPolygonPoints);
+    // Label untuk Gondang (di tengah lingkaran)
     const gondangLabel = L.marker([gondangCenter.lat, gondangCenter.lng], {
         icon: L.divIcon({
             className: 'kecamatan-label',
-            html: `<div style="background:rgba(255,107,53,0.9); backdrop-filter:blur(4px); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 12px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.25); letter-spacing:0.5px;">
+            html: `<div style="background:rgba(255,107,53,0.9); backdrop-filter:blur(4px); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 12px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.25);">
                     📍 KECAMATAN GONDANG
                    </div>`,
             iconSize: [170, 30],
@@ -293,9 +269,9 @@ function addBoundaryPolygons() {
     gondangLabel.addTo(map);
     boundaryLayers.push(gondangLabel);
     
-    console.log('Comprehensive polygons added for Temayang (12 desa) and Gondang (7 desa)');
-    console.log('Temayang polygon points:', temayangPolygonPoints.length);
-    console.log('Gondang polygon points:', gondangPolygonPoints.length);
+    console.log('Circular boundaries added for Temayang and Gondang');
+    console.log('Temayang: center', temayangCenter, 'radius', temayangRadius, 'km');
+    console.log('Gondang: center', gondangCenter, 'radius', gondangRadius, 'km');
 }
 
 // Fetch data from Google Sheets
@@ -841,7 +817,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addLayer(markerCluster);
     
-    // Add comprehensive boundary polygons
+    // Add circular boundaries
     addBoundaryPolygons();
     
     // Set active layer button
