@@ -44,45 +44,48 @@ const gondangDesa = [
 ];
 
 // ============================================
-// KOORDINAT REFERENSI DESA (Latitude, Longitude)
+// KOORDINAT DESA (Titik referensi untuk membentuk polygon)
 // ============================================
 
 // Koordinat desa di Kecamatan Temayang
-const temayangCoordinates = {
-    Soko: { lat: -7.422083, lng: 111.929442 },
-    Kedungsumber: { lat: -7.348792, lng: 111.902089 },
-    Bakulan: { lat: -7.355000, lng: 111.885000 },
-    Belun: { lat: -7.368000, lng: 111.878000 },
-    Buntalan: { lat: -7.382000, lng: 111.890000 },
-    Jono: { lat: -7.395000, lng: 111.898000 },
-    Kedungsari: { lat: -7.338000, lng: 111.895000 },
-    Ngujung: { lat: -7.372000, lng: 111.910000 },
-    Pancur: { lat: -7.405000, lng: 111.915000 },
-    Sugihwaras: { lat: -7.358000, lng: 111.870000 },
-    Temayang: { lat: -7.365000, lng: 111.895000 }
-};
+const temayangCoordinates = [
+    { desa: 'Soko', lat: -7.422083, lng: 111.929442 },
+    { desa: 'Kedungsumber', lat: -7.348792, lng: 111.902089 },
+    { desa: 'Bakulan', lat: -7.355000, lng: 111.885000 },
+    { desa: 'Belun', lat: -7.368000, lng: 111.878000 },
+    { desa: 'Buntalan', lat: -7.382000, lng: 111.890000 },
+    { desa: 'Jono', lat: -7.395000, lng: 111.898000 },
+    { desa: 'Kedungsari', lat: -7.338000, lng: 111.895000 },
+    { desa: 'Ngujung', lat: -7.372000, lng: 111.910000 },
+    { desa: 'Pancur', lat: -7.405000, lng: 111.915000 },
+    { desa: 'Sugihwaras', lat: -7.358000, lng: 111.870000 },
+    { desa: 'Temayang', lat: -7.365000, lng: 111.895000 }
+];
 
 // Koordinat desa di Kecamatan Gondang
-const gondangCoordinates = {
-    Jari: { lat: -7.405636, lng: 111.817664 },
-    Pragelan: { lat: -7.395694, lng: 111.792511 },
-    Gondang: { lat: -7.385000, lng: 111.835000 },
-    Krondonan: { lat: -7.378000, lng: 111.845000 },
-    Pajeng: { lat: -7.392000, lng: 111.825000 },
-    Sambongrejo: { lat: -7.370000, lng: 111.810000 }
-};
+const gondangCoordinates = [
+    { desa: 'Jari', lat: -7.405636, lng: 111.817664 },
+    { desa: 'Pragelan', lat: -7.395694, lng: 111.792511 },
+    { desa: 'Gondang', lat: -7.385000, lng: 111.835000 },
+    { desa: 'Krondonan', lat: -7.378000, lng: 111.845000 },
+    { desa: 'Pajeng', lat: -7.392000, lng: 111.825000 },
+    { desa: 'Sambongrejo', lat: -7.370000, lng: 111.810000 }
+];
 
 // ============================================
-// MEMBANGUN POLYGON ALAMI DARI TITIK DESA
-// Menggunakan convex hull sederhana untuk bentuk yang natural
+// MEMBANGUN POLYGON MENYELURUH (Convex Hull)
 // ============================================
 
-// Fungsi untuk menghitung convex hull (Graham Scan) - menghasilkan polygon alami
+// Fungsi untuk menghitung convex hull (Graham Scan)
+// Menghasilkan polygon yang mengelilingi SEMUA titik
 function convexHull(points) {
-    if (points.length < 3) return points;
+    if (points.length < 3) return points.slice();
+    
+    // Clone points
+    let pts = points.map(p => ({ lat: p.lat, lng: p.lng, desa: p.desa }));
     
     // Cari titik dengan lat terendah (paling selatan)
-    let start = points.reduce((min, p) => p.lat < min.lat ? p : min, points[0]);
+    let start = pts.reduce((min, p) => p.lat < min.lat ? p : min, pts[0]);
     
     // Hitung sudut dari titik start
     function angle(p) {
@@ -90,10 +93,10 @@ function convexHull(points) {
     }
     
     // Sort berdasarkan sudut
-    let sorted = points.slice();
+    let sorted = pts.slice();
     sorted.sort((a, b) => angle(a) - angle(b));
     
-    // Graham Scan
+    // Graham Scan - membangun convex hull
     let hull = [];
     for (let i = 0; i < sorted.length; i++) {
         while (hull.length >= 2) {
@@ -110,11 +113,11 @@ function convexHull(points) {
     return hull;
 }
 
-// Fungsi untuk ekspansi polygon (membuat batas wilayah)
-function expandPolygon(points, expansionKm = 1.5) {
+// Fungsi untuk memperluas polygon (membuat batas wilayah)
+function expandPolygon(points, expansionKm = 2.0) {
     if (points.length < 3) return points;
     
-    // Konversi km ke derajat (approx: 1 derajat ≈ 111 km)
+    // Konversi km ke derajat (1 derajat ≈ 111 km)
     const expansionDeg = expansionKm / 111;
     
     // Hitung centroid
@@ -123,19 +126,19 @@ function expandPolygon(points, expansionKm = 1.5) {
     
     // Ekspansi setiap titik menjauh dari centroid
     return points.map(p => ({
-        lat: centerLat + (p.lat - centerLat) * (1 + expansionDeg * 2),
-        lng: centerLng + (p.lng - centerLng) * (1 + expansionDeg * 2)
+        lat: centerLat + (p.lat - centerLat) * (1 + expansionDeg * 2.5),
+        lng: centerLng + (p.lng - centerLng) * (1 + expansionDeg * 2.5)
     }));
 }
 
-// Bangun polygon alami untuk Temayang
-let temayangHull = convexHull(Object.values(temayangCoordinates));
-temayangHull = expandPolygon(temayangHull, 1.8);
+// Bangun polygon menyeluruh untuk Temayang
+let temayangHull = convexHull(temayangCoordinates);
+temayangHull = expandPolygon(temayangHull, 2.2);
 const temayangPolygonPoints = temayangHull.map(p => [p.lat, p.lng]);
 
-// Bangun polygon alami untuk Gondang
-let gondangHull = convexHull(Object.values(gondangCoordinates));
-gondangHull = expandPolygon(gondangHull, 1.5);
+// Bangun polygon menyeluruh untuk Gondang
+let gondangHull = convexHull(gondangCoordinates);
+gondangHull = expandPolygon(gondangHull, 2.0);
 const gondangPolygonPoints = gondangHull.map(p => [p.lat, p.lng]);
 
 // Toast notification
@@ -172,114 +175,7 @@ function updateStatusBar(status, message) {
     }
 }
 
-// Add natural polygons with click info
-function addBoundaryPolygons() {
-    // Clear existing boundaries if any
-    boundaryLayers.forEach(layer => {
-        if (map && layer) map.removeLayer(layer);
-    });
-    boundaryLayers = [];
-    
-    // ============================================
-    // POLYGON KECAMATAN TEMAYANG (Bentuk Alami)
-    // ============================================
-    const temayangPolygon = L.polygon(temayangPolygonPoints, {
-        color: '#00AAFF',
-        fillColor: '#00AAFF',
-        fillOpacity: 0.08,
-        weight: 2.5,
-        opacity: 0.9,
-        smoothFactor: 1,
-        className: 'kecamatan-polygon'
-    }).bindPopup(`
-        <div style="text-align:left; min-width:200px;">
-            <div style="text-align:center; border-bottom:2px solid #00AAFF; padding-bottom:8px; margin-bottom:10px;">
-                <strong style="color:#00AAFF; font-size:16px;">🏘️ Kecamatan Temayang</strong><br>
-                <span style="font-size:11px; color:#888;">Kabupaten Bojonegoro</span>
-            </div>
-            <div style="margin-bottom:8px;">
-                <span style="background:#00AAFF20; color:#00AAFF; padding:2px 8px; border-radius:12px; font-size:11px;">
-                    📊 12 Desa
-                </span>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; max-height:200px; overflow-y:auto;">
-                ${temayangDesa.map(desa => `<div style="padding:4px; border-bottom:1px solid rgba(0,170,255,0.2);">• ${desa}</div>`).join('')}
-            </div>
-            <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(0,170,255,0.3); font-size:10px; color:#888; text-align:center;">
-                Klik lagi untuk menutup
-            </div>
-        </div>
-    `);
-    temayangPolygon.addTo(map);
-    boundaryLayers.push(temayangPolygon);
-    
-    // Label untuk Temayang
-    const temayangCenter = getPolygonCenter(temayangPolygonPoints);
-    const temayangLabel = L.marker([temayangCenter.lat, temayangCenter.lng], {
-        icon: L.divIcon({
-            className: 'kecamatan-label',
-            html: `<div style="background:rgba(0,170,255,0.85); backdrop-filter:blur(4px); padding:5px 14px; border-radius:24px; font-size:12px; font-weight:600; white-space:nowrap; box-shadow:0 2px 10px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2);">
-                    📍 Kec. Temayang
-                   </div>`,
-            iconSize: [140, 28],
-            iconAnchor: [70, 14]
-        })
-    });
-    temayangLabel.addTo(map);
-    boundaryLayers.push(temayangLabel);
-    
-    // ============================================
-    // POLYGON KECAMATAN GONDANG (Bentuk Alami)
-    // ============================================
-    const gondangPolygon = L.polygon(gondangPolygonPoints, {
-        color: '#FF6B35',
-        fillColor: '#FF6B35',
-        fillOpacity: 0.08,
-        weight: 2.5,
-        opacity: 0.9,
-        smoothFactor: 1,
-        className: 'kecamatan-polygon'
-    }).bindPopup(`
-        <div style="text-align:left; min-width:180px;">
-            <div style="text-align:center; border-bottom:2px solid #FF6B35; padding-bottom:8px; margin-bottom:10px;">
-                <strong style="color:#FF6B35; font-size:16px;">🏘️ Kecamatan Gondang</strong><br>
-                <span style="font-size:11px; color:#888;">Kabupaten Bojonegoro</span>
-            </div>
-            <div style="margin-bottom:8px;">
-                <span style="background:#FF6B3520; color:#FF6B35; padding:2px 8px; border-radius:12px; font-size:11px;">
-                    📊 7 Desa
-                </span>
-            </div>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; max-height:200px; overflow-y:auto;">
-                ${gondangDesa.map(desa => `<div style="padding:4px; border-bottom:1px solid rgba(255,107,53,0.2);">• ${desa}</div>`).join('')}
-            </div>
-            <div style="margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,107,53,0.3); font-size:10px; color:#888; text-align:center;">
-                Klik lagi untuk menutup
-            </div>
-        </div>
-    `);
-    gondangPolygon.addTo(map);
-    boundaryLayers.push(gondangPolygon);
-    
-    // Label untuk Gondang
-    const gondangCenter = getPolygonCenter(gondangPolygonPoints);
-    const gondangLabel = L.marker([gondangCenter.lat, gondangCenter.lng], {
-        icon: L.divIcon({
-            className: 'kecamatan-label',
-            html: `<div style="background:rgba(255,107,53,0.85); backdrop-filter:blur(4px); padding:5px 14px; border-radius:24px; font-size:12px; font-weight:600; white-space:nowrap; box-shadow:0 2px 10px rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.2);">
-                    📍 Kec. Gondang
-                   </div>`,
-            iconSize: [130, 28],
-            iconAnchor: [65, 14]
-        })
-    });
-    gondangLabel.addTo(map);
-    boundaryLayers.push(gondangLabel);
-    
-    console.log('Natural polygons added for Temayang (12 desa) and Gondang (7 desa)');
-}
-
-// Helper untuk mendapatkan titik tengah polygon
+// Fungsi untuk mendapatkan titik tengah polygon
 function getPolygonCenter(points) {
     if (!points || points.length === 0) return { lat: 0, lng: 0 };
     let sumLat = 0, sumLng = 0;
@@ -291,6 +187,115 @@ function getPolygonCenter(points) {
         lat: sumLat / points.length,
         lng: sumLng / points.length
     };
+}
+
+// Add boundary polygons (menyeluruh)
+function addBoundaryPolygons() {
+    // Clear existing boundaries if any
+    boundaryLayers.forEach(layer => {
+        if (map && layer) map.removeLayer(layer);
+    });
+    boundaryLayers = [];
+    
+    // ============================================
+    // POLYGON MENYELURUH KECAMATAN TEMAYANG
+    // ============================================
+    const temayangPolygon = L.polygon(temayangPolygonPoints, {
+        color: '#00AAFF',
+        fillColor: '#00AAFF',
+        fillOpacity: 0.08,
+        weight: 2.5,
+        opacity: 0.9,
+        smoothFactor: 0.5,
+        className: 'kecamatan-polygon'
+    }).bindPopup(`
+        <div style="text-align:left; min-width:220px; max-width:280px;">
+            <div style="text-align:center; border-bottom:2px solid #00AAFF; padding-bottom:10px; margin-bottom:12px;">
+                <strong style="color:#00AAFF; font-size:16px;">🏘️ KECAMATAN TEMAYANG</strong><br>
+                <span style="font-size:11px; color:#888;">Kabupaten Bojonegoro, Jawa Timur</span>
+            </div>
+            <div style="margin-bottom:12px;">
+                <span style="background:#00AAFF20; color:#00AAFF; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:500;">
+                    📊 TOTAL 12 DESA
+                </span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; max-height:220px; overflow-y:auto; padding-right:4px;">
+                ${temayangDesa.map(desa => `<div style="padding:5px 4px; border-bottom:1px solid rgba(0,170,255,0.15);">📍 ${desa}</div>`).join('')}
+            </div>
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid rgba(0,170,255,0.3); font-size:10px; color:#888; text-align:center;">
+                Klik di luar popup untuk menutup
+            </div>
+        </div>
+    `);
+    temayangPolygon.addTo(map);
+    boundaryLayers.push(temayangPolygon);
+    
+    // Label untuk Temayang (di tengah polygon)
+    const temayangCenter = getPolygonCenter(temayangPolygonPoints);
+    const temayangLabel = L.marker([temayangCenter.lat, temayangCenter.lng], {
+        icon: L.divIcon({
+            className: 'kecamatan-label',
+            html: `<div style="background:rgba(0,170,255,0.9); backdrop-filter:blur(4px); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 12px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.25); letter-spacing:0.5px;">
+                    📍 KECAMATAN TEMAYANG
+                   </div>`,
+            iconSize: [180, 30],
+            iconAnchor: [90, 15]
+        })
+    });
+    temayangLabel.addTo(map);
+    boundaryLayers.push(temayangLabel);
+    
+    // ============================================
+    // POLYGON MENYELURUH KECAMATAN GONDANG
+    // ============================================
+    const gondangPolygon = L.polygon(gondangPolygonPoints, {
+        color: '#FF6B35',
+        fillColor: '#FF6B35',
+        fillOpacity: 0.08,
+        weight: 2.5,
+        opacity: 0.9,
+        smoothFactor: 0.5,
+        className: 'kecamatan-polygon'
+    }).bindPopup(`
+        <div style="text-align:left; min-width:200px; max-width:250px;">
+            <div style="text-align:center; border-bottom:2px solid #FF6B35; padding-bottom:10px; margin-bottom:12px;">
+                <strong style="color:#FF6B35; font-size:16px;">🏘️ KECAMATAN GONDANG</strong><br>
+                <span style="font-size:11px; color:#888;">Kabupaten Bojonegoro, Jawa Timur</span>
+            </div>
+            <div style="margin-bottom:12px;">
+                <span style="background:#FF6B3520; color:#FF6B35; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:500;">
+                    📊 TOTAL 7 DESA
+                </span>
+            </div>
+            <div style="display:grid; grid-template-columns:1fr; gap:6px; font-size:11px; max-height:200px; overflow-y:auto; padding-right:4px;">
+                ${gondangDesa.map(desa => `<div style="padding:5px 4px; border-bottom:1px solid rgba(255,107,53,0.15);">📍 ${desa}</div>`).join('')}
+            </div>
+            <div style="margin-top:12px; padding-top:8px; border-top:1px solid rgba(255,107,53,0.3); font-size:10px; color:#888; text-align:center;">
+                Klik di luar popup untuk menutup
+            </div>
+        </div>
+    `);
+    gondangPolygon.addTo(map);
+    boundaryLayers.push(gondangPolygon);
+    
+    // Label untuk Gondang (di tengah polygon)
+    const gondangCenter = getPolygonCenter(gondangPolygonPoints);
+    const gondangLabel = L.marker([gondangCenter.lat, gondangCenter.lng], {
+        icon: L.divIcon({
+            className: 'kecamatan-label',
+            html: `<div style="background:rgba(255,107,53,0.9); backdrop-filter:blur(4px); padding:6px 16px; border-radius:30px; font-size:12px; font-weight:700; white-space:nowrap; box-shadow:0 2px 12px rgba(0,0,0,0.25); border:1px solid rgba(255,255,255,0.25); letter-spacing:0.5px;">
+                    📍 KECAMATAN GONDANG
+                   </div>`,
+            iconSize: [170, 30],
+            iconAnchor: [85, 15]
+        })
+    });
+    gondangLabel.addTo(map);
+    boundaryLayers.push(gondangLabel);
+    
+    console.log('Comprehensive polygons added for Temayang (12 desa) and Gondang (7 desa)');
+    console.log('Temayang polygon points:', temayangPolygonPoints.length);
+    console.log('Gondang polygon points:', gondangPolygonPoints.length);
 }
 
 // Fetch data from Google Sheets
@@ -836,7 +841,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addLayer(markerCluster);
     
-    // Add natural polygons with click info
+    // Add comprehensive boundary polygons
     addBoundaryPolygons();
     
     // Set active layer button
@@ -856,19 +861,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Fix map size
     setTimeout(() => { if (map) map.invalidateSize(); }, 100);
     
-    // Close panels when clicking on map (tapi jangan tutup popup polygon)
-    map.on('click', (e) => {
-        // Cek apakah klik pada polygon? Biarkan popup polygon tetap
-        if (activePanel && !e.target) togglePanel(activePanel);
-    });
-    
     // Escape key handler
     document.addEventListener('keydown', (e) => { 
         if (e.key === 'Escape') { 
             if (activePanel) togglePanel(activePanel); 
             closeBottomSheet(); 
             closeSidebar(); 
-            // Close all popups
             if (map) map.closePopup();
         } 
     });
