@@ -544,7 +544,7 @@
       color: #FF6B35;
     }
 
-    /* Info Section */
+    /* Info Section - Sederhana */
     .info-section {
       background: rgba(17, 24, 39, 0.5);
       backdrop-filter: blur(10px);
@@ -556,7 +556,7 @@
 
     .info-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 32px;
     }
 
@@ -573,8 +573,19 @@
 
     .info-item i {
       font-size: 36px;
-      color: #00D4FF;
       margin-bottom: 16px;
+    }
+
+    .info-item i.fa-map-marked-alt {
+      color: #00D4FF;
+    }
+
+    .info-item i.fa-chart-line {
+      color: #8B5CF6;
+    }
+
+    .info-item i.fa-shield-alt {
+      color: #39FF14;
     }
 
     .info-item h4 {
@@ -938,28 +949,23 @@
     </div>
   </div>
 
-  <!-- Info Section -->
+  <!-- Info Section - Tanpa Google Sheets, Analisis Statistik, Responsive, Sync -->
   <div class="info-section">
     <div class="info-grid">
       <div class="info-item">
-        <i class="fas fa-database"></i>
-        <h4>Google Sheets Integration</h4>
-        <p>Data tersimpan di Google Sheets dan bisa diakses real-time oleh user</p>
+        <i class="fas fa-map-marked-alt"></i>
+        <h4>Pemetaan Blank Spot</h4>
+        <p>Visualisasi lokasi blank spot internet di Kecamatan Temayang & Gondang</p>
       </div>
       <div class="info-item">
-        <i class="fas fa-chart-simple"></i>
-        <h4>Analisis Statistik</h4>
-        <p>Tersedia statistik lengkap tentang sebaran blank spot per desa</p>
+        <i class="fas fa-chart-line"></i>
+        <h4>Data Akurat 2026</h4>
+        <p>Berdasarkan survei lapangan terkini di 19 desa</p>
       </div>
       <div class="info-item">
-        <i class="fas fa-mobile-screen"></i>
-        <h4>Responsive Design</h4>
-        <p>Tampilan optimal di desktop, tablet, maupun smartphone</p>
-      </div>
-      <div class="info-item">
-        <i class="fas fa-cloud-arrow-up"></i>
-        <h4>Sync Otomatis</h4>
-        <p>Sinkronisasi data otomatis antara admin panel dan user view</p>
+        <i class="fas fa-shield-alt"></i>
+        <h4>Informasi Real-Time</h4>
+        <p>Data selalu diperbarui sesuai kondisi terkini di lapangan</p>
       </div>
     </div>
   </div>
@@ -979,7 +985,7 @@
     <h3>SIG Blank Spot Internet 2026</h3>
     <p>Sistem Informasi Geografis ini bertujuan untuk memetakan area blank spot internet di <strong>Kecamatan Temayang dan Gondang</strong>, Kabupaten Bojonegoro.</p>
     <p><strong>📊 Cakupan Wilayah:</strong><br>Kecamatan Temayang (12 desa) + Kecamatan Gondang (7 desa) = Total 19 desa</p>
-    <p>Data diperoleh dari survei lapangan tahun 2026 dan terus diperbarui secara real-time melalui Google Sheets.</p>
+    <p>Data diperoleh dari survei lapangan tahun 2026 dan terus diperbarui secara real-time.</p>
     <p style="color: #00D4FF; margin-top: 16px;"><strong>Prodi PTI IKIP PGRI BOJONEGORO</strong></p>
     <button class="btn" onclick="closeInfoModal()"><i class="fas fa-check"></i> Tutup</button>
   </div>
