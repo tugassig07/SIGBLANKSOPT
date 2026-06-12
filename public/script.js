@@ -1,5 +1,6 @@
 // ============================================
-// USER VIEW - GOOGLE SHEETS LIVE DATA (FIXED MARKERS)
+// SIG BLANK SPOT INTERNET 2026
+// TEMAYANG & GONDANG, BOJONEGORO
 // ============================================
 
 const API_URL = 'https://script.google.com/macros/s/AKfycbxWL_zJ-TML_497iusMCgSPdgWsUWe0XqrcTJb_f-w-Ob0hAVbTSisWrd-EPAWLpTps_w/exec';
@@ -13,10 +14,10 @@ let lastSyncTime = null, isDarkMode = true;
 
 // Color mapping for status
 const colorMap = { 
-    blank: '#FF3B5C',   // Merah untuk Blank Spot
-    lemah: '#FFD700',   // Kuning untuk Sinyal Lemah
-    sedang: '#FF8C00',  // Oranye untuk Sinyal Sedang
-    baik: '#39FF14'     // Hijau untuk Sinyal Baik
+    blank: '#FF3B5C',
+    lemah: '#FFD700',
+    sedang: '#FF8C00',
+    baik: '#39FF14'
 };
 
 const labelMap = { 
@@ -26,6 +27,7 @@ const labelMap = {
     baik: 'Sinyal Baik' 
 };
 
+// Toast notification
 function showToast(msg, type = 'success') {
     const container = document.getElementById('toastContainer');
     if (!container) return;
@@ -33,7 +35,10 @@ function showToast(msg, type = 'success') {
     toast.className = `toast toast-${type}`;
     toast.innerHTML = `<div class="toast-icon">${type === 'success' ? '✓' : 'ℹ'}</div><div class="toast-message">${msg}</div>`;
     container.appendChild(toast);
-    setTimeout(() => { toast.classList.add('fade-out'); setTimeout(() => toast.remove(), 300); }, 3000);
+    setTimeout(() => { 
+        toast.classList.add('fade-out'); 
+        setTimeout(() => toast.remove(), 300); 
+    }, 3000);
 }
 
 function updateStatusBar(status, message) {
@@ -41,18 +46,32 @@ function updateStatusBar(status, message) {
     const text = document.getElementById('statusText');
     if (!dot || !text) return;
     dot.className = 'status-dot';
-    if (status === 'loading') { dot.classList.add('loading'); text.innerHTML = '⏳ ' + message; }
-    else if (status === 'success') { dot.classList.add('success'); text.innerHTML = '✓ ' + message; }
-    else if (status === 'warning') { dot.classList.add('warning'); text.innerHTML = '⚠ ' + message; }
-    else { dot.classList.add('error'); text.innerHTML = '✗ ' + message; }
+    if (status === 'loading') { 
+        dot.classList.add('loading'); 
+        text.innerHTML = '⏳ ' + message; 
+    } else if (status === 'success') { 
+        dot.classList.add('success'); 
+        text.innerHTML = '✓ ' + message; 
+    } else if (status === 'warning') { 
+        dot.classList.add('warning'); 
+        text.innerHTML = '⚠ ' + message; 
+    } else { 
+        dot.classList.add('error'); 
+        text.innerHTML = '✗ ' + message; 
+    }
 }
 
+// Fetch data from Google Sheets
 async function fetchDataFromSheets() {
     const overlay = document.getElementById('loadingOverlay');
     const progressBar = document.getElementById('loadingProgressBar');
     if (overlay) overlay.style.display = 'flex';
     let progress = 0;
-    const interval = setInterval(() => { progress += 10; if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%'; if (progress >= 90) clearInterval(interval); }, 100);
+    const interval = setInterval(() => { 
+        progress += 10; 
+        if (progressBar) progressBar.style.width = Math.min(progress, 90) + '%'; 
+        if (progress >= 90) clearInterval(interval); 
+    }, 100);
     
     try {
         updateStatusBar('loading', 'Mengambil data...');
@@ -120,72 +139,27 @@ async function fetchDataFromSheets() {
     }
 }
 
-async function refreshData() { await fetchDataFromSheets(); }
+async function refreshData() { 
+    await fetchDataFromSheets(); 
+}
 
-// ========== FIXED: CREATE MARKER ICONS WITH CORRECT COLORS ==========
+// Marker functions
 function getMarkerColor(status) {
     switch(status) {
-        case 'blank': return '#FF3B5C';  // Merah
-        case 'lemah': return '#FFD700';  // Kuning
-        case 'sedang': return '#FF8C00'; // Oranye
-        case 'baik': return '#39FF14';   // Hijau
+        case 'blank': return '#FF3B5C';
+        case 'lemah': return '#FFD700';
+        case 'sedang': return '#FF8C00';
+        case 'baik': return '#39FF14';
         default: return '#888888';
     }
 }
 
-function getMarkerSize(status) {
-    return status === 'blank' ? 38 : 34;
-}
-
 function createMarkerIcon(status, kec) {
     const color = getMarkerColor(status);
-    const size = getMarkerSize(status);
-    const borderColor = kec === 'Kedewan' ? '#00AAFF' : '#FF6B35';
+    const size = status === 'blank' ? 32 : 28;
+    const borderColor = kec === 'Temayang' ? '#00AAFF' : '#FF6B35';
     
-    // Create SVG for marker
-    const svgHtml = `
-        <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-            <!-- Outer ring -->
-            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 2}" 
-                    fill="${color}" fill-opacity="0.15" 
-                    stroke="${borderColor}" stroke-width="2"/>
-            <!-- Inner circle -->
-            <circle cx="${size/2}" cy="${size/2}" r="${size/2 - 8}" 
-                    fill="${color}" stroke="#fff" stroke-width="2.5"/>
-    `;
-    
-    // Add center icon based on status
-    if (status === 'blank') {
-        svgHtml += `<circle cx="${size/2}" cy="${size/2}" r="5" fill="#fff" fill-opacity="0.9"/>`;
-        svgHtml += `<circle cx="${size/2}" cy="${size/2}" r="2" fill="${color}"/>`;
-    } else if (status === 'lemah') {
-        svgHtml += `<circle cx="${size/2}" cy="${size/2}" r="${size/2 - 14}" fill="#fff" fill-opacity="0.5"/>`;
-        svgHtml += `<path d="M${size/2-5} ${size/2-3} L${size/2+5} ${size/2-3} M${size/2-4} ${size/2} L${size/2+4} ${size/2} M${size/2-3} ${size/2+3} L${size/2+3} ${size/2+3}" stroke="#fff" stroke-width="1.5" fill="none"/>`;
-    } else if (status === 'sedang') {
-        svgHtml += `<circle cx="${size/2}" cy="${size/2}" r="${size/2 - 14}" fill="#fff" fill-opacity="0.5"/>`;
-        svgHtml += `<path d="M${size/2-4} ${size/2-2} L${size/2+4} ${size/2-2} M${size/2-4} ${size/2+2} L${size/2+4} ${size/2+2}" stroke="#fff" stroke-width="1.5" fill="none"/>`;
-    } else if (status === 'baik') {
-        svgHtml += `<circle cx="${size/2}" cy="${size/2}" r="${size/2 - 14}" fill="#fff" fill-opacity="0.5"/>`;
-        svgHtml += `<path d="M${size/2-5} ${size/2} L${size/2-2} ${size/2+3} L${size/2+5} ${size/2-3}" stroke="#fff" stroke-width="2" fill="none"/>`;
-    }
-    
-    svgHtml += `</svg>`;
-    
-    return L.divIcon({
-        className: 'custom-marker',
-        html: svgHtml,
-        iconSize: [size, size],
-        iconAnchor: [size/2, size/2],
-        popupAnchor: [0, -size/2]
-    });
-}
-
-// Alternative: Using simple colored markers (more reliable)
-function createSimpleMarkerIcon(status, kec) {
-    const color = getMarkerColor(status);
-    const size = 30;
-    
-    const markerHtml = `
+    const html = `
         <div style="
             width: ${size}px;
             height: ${size}px;
@@ -196,10 +170,9 @@ function createSimpleMarkerIcon(status, kec) {
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
+            font-size: 12px;
             font-weight: bold;
             color: white;
-            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
         ">
             ${status === 'blank' ? '⚠️' : status === 'lemah' ? '📶' : status === 'sedang' ? '📱' : '✓'}
         </div>
@@ -207,21 +180,11 @@ function createSimpleMarkerIcon(status, kec) {
     
     return L.divIcon({
         className: 'simple-marker',
-        html: markerHtml,
+        html: html,
         iconSize: [size, size],
         iconAnchor: [size/2, size/2],
         popupAnchor: [0, -size/2]
     });
-}
-
-// Use this simpler version if the SVG version doesn't work
-const useSimpleMarkers = true; // Set to false if you want SVG markers
-
-function makeIcon(status, kec) {
-    if (useSimpleMarkers) {
-        return createSimpleMarkerIcon(status, kec);
-    }
-    return createMarkerIcon(status, kec);
 }
 
 function popupContent(d) {
@@ -229,22 +192,22 @@ function popupContent(d) {
     const statusText = labelMap[d.status] || d.status;
     
     return `
-        <div class="popup-title">
-            <strong>${d.dusun || 'Tidak bernama'}</strong>
-            <span class="popup-status" style="background:${statusColor}20;color:${statusColor};padding:2px 8px;border-radius:12px;font-size:10px;margin-left:8px;">
-                ${statusText}
-            </span>
-        </div>
-        <div class="popup-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0;">
-            <div><span style="color:#64748B;font-size:10px;">Kecamatan</span><br><strong>${d.kec || '-'}</strong></div>
-            <div><span style="color:#64748B;font-size:10px;">Desa</span><br><strong>${d.desa || '-'}</strong></div>
-            <div><span style="color:#64748B;font-size:10px;">Populasi</span><br><strong>${(d.populasi || 0).toLocaleString()} jiwa</strong></div>
-            <div><span style="color:#64748B;font-size:10px;">Provider</span><br><strong>${d.provider || '-'}</strong></div>
-            <div><span style="color:#64748B;font-size:10px;">Elevasi</span><br><strong>${d.elev || 0} mdpl</strong></div>
-            <div><span style="color:#64748B;font-size:10px;">RSSI</span><br><strong>${d.rssi || -70} dBm</strong></div>
-        </div>
-        <div class="popup-footer">
-            <button class="popup-detail-btn" onclick="showDetail(${d.id})" style="width:100%;padding:8px;border-radius:8px;border:1px solid #00D4FF;background:transparent;color:#00D4FF;cursor:pointer;">
+        <div style="min-width: 200px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <strong style="font-size:14px;">${d.dusun || 'Tidak bernama'}</strong>
+                <span style="background:${statusColor}20;color:${statusColor};padding:2px 8px;border-radius:12px;font-size:10px;">
+                    ${statusText}
+                </span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+                <div><span style="color:#64748B;font-size:10px;">Kecamatan</span><br><strong>${d.kec || '-'}</strong></div>
+                <div><span style="color:#64748B;font-size:10px;">Desa</span><br><strong>${d.desa || '-'}</strong></div>
+                <div><span style="color:#64748B;font-size:10px;">Populasi</span><br><strong>${(d.populasi || 0).toLocaleString()} jiwa</strong></div>
+                <div><span style="color:#64748B;font-size:10px;">Provider</span><br><strong>${d.provider || '-'}</strong></div>
+                <div><span style="color:#64748B;font-size:10px;">Elevasi</span><br><strong>${d.elev || 0} mdpl</strong></div>
+                <div><span style="color:#64748B;font-size:10px;">RSSI</span><br><strong>${d.rssi || -70} dBm</strong></div>
+            </div>
+            <button onclick="showDetail(${d.id})" style="width:100%;padding:8px;border-radius:8px;border:1px solid #00D4FF;background:transparent;color:#00D4FF;cursor:pointer;">
                 Lihat Detail →
             </button>
         </div>
@@ -256,41 +219,26 @@ function renderMarkers(data) {
         console.error('Marker cluster not initialized');
         return;
     }
-    
     markerCluster.clearLayers();
     
-    if (!data || data.length === 0) {
-        console.log('No data to render');
-        return;
-    }
-    
-    console.log(`Rendering ${data.length} markers with colors:`, 
-        data.map(d => `${d.dusun}: ${d.status} (${getMarkerColor(d.status)})`));
+    if (!data || data.length === 0) return;
     
     data.forEach(d => {
-        // Skip invalid coordinates
-        if (!d.lat || !d.lng || d.lat === 0 || d.lng === 0) {
-            console.warn(`Invalid coordinates for ${d.dusun}: lat=${d.lat}, lng=${d.lng}`);
-            return;
-        }
-        
-        const icon = makeIcon(d.status, d.kec);
+        if (!d.lat || !d.lng || d.lat === 0 || d.lng === 0) return;
+        const icon = createMarkerIcon(d.status, d.kec);
         const marker = L.marker([d.lat, d.lng], { icon: icon })
             .bindPopup(popupContent(d), { maxWidth: 280, className: 'glass-popup' })
             .bindTooltip(`${d.dusun} - ${labelMap[d.status]}`, { 
                 direction: 'top', 
-                offset: [0, -20], 
+                offset: [0, -15], 
                 className: 'custom-tooltip', 
-                sticky: true,
-                permanent: false
+                sticky: true 
             });
-        
         markerCluster.addLayer(marker);
     });
-    
-    console.log(`Finished rendering ${data.length} markers`);
 }
 
+// Statistics and UI Updates
 function updateStats(data) {
     const blank = data.filter(d => d.status === 'blank').length;
     const lemah = data.filter(d => d.status === 'lemah').length;
@@ -299,19 +247,10 @@ function updateStats(data) {
     const total = data.length;
     
     const elements = { 
-        'h-total': total, 
-        'h-blankspot': blank, 
-        'h-lemah': lemah, 
-        'h-baik': baik, 
-        'h-sedang': sedang,
-        'cnt-blank': blank, 
-        'cnt-lemah': lemah, 
-        'cnt-sedang': sedang, 
-        'cnt-baik': baik,
-        'dl-blank': blank, 
-        'dl-lemah': lemah, 
-        'dl-sedang': sedang, 
-        'dl-baik': baik,
+        'h-total': total, 'h-blankspot': blank, 'h-lemah': lemah, 
+        'h-baik': baik, 'h-sedang': sedang,
+        'cnt-blank': blank, 'cnt-lemah': lemah, 'cnt-sedang': sedang, 'cnt-baik': baik,
+        'dl-blank': blank, 'dl-lemah': lemah, 'dl-sedang': sedang, 'dl-baik': baik,
         'badgePoints': total + ' total'
     };
     
@@ -325,11 +264,11 @@ function updateStats(data) {
     const pcts = total > 0 ? [blank/total*100, lemah/total*100, sedang/total*100, baik/total*100] : [0,0,0,0];
     bars.forEach((bar, i) => { if (bar) bar.style.width = pcts[i] + '%'; });
     
-    // Update Kecamatan stats
-    const kedBlank = data.filter(d => d.kec === 'Kedewan' && d.status === 'blank').length;
-    const kasBlank = data.filter(d => d.kec === 'Kasiman' && d.status === 'blank').length;
-    const sk = document.getElementById('s-kedewan-blank'); if (sk) sk.textContent = kedBlank;
-    const ska = document.getElementById('s-kasiman-blank'); if (ska) ska.textContent = kasBlank;
+    // Update kecamatan stats (Temayang & Gondang)
+    const temayangBlank = data.filter(d => d.kec === 'Temayang' && d.status === 'blank').length;
+    const gondangBlank = data.filter(d => d.kec === 'Gondang' && d.status === 'blank').length;
+    const st = document.getElementById('s-temayang-blank'); if (st) st.textContent = temayangBlank;
+    const sg = document.getElementById('s-gondang-blank'); if (sg) sg.textContent = gondangBlank;
 }
 
 function updateDonut(data) {
@@ -397,6 +336,7 @@ function updateUI() {
     renderChart(pointsData); 
 }
 
+// Filter functions
 function filterData() {
     const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
     filteredData = pointsData.filter(d => {
@@ -453,6 +393,7 @@ function debouncedFilter() {
     searchTimeout = setTimeout(() => filterData(), 300); 
 }
 
+// Map functions
 function toggleHeatmap(btn) {
     if (pointsData.length === 0) { showToast('Tidak ada data untuk heatmap', 'warning'); return; }
     heatActive = !heatActive;
@@ -493,7 +434,12 @@ function setLayer(name, btn) {
     showToast(`Layer: ${name === 'satellite' ? 'Satelit' : 'Peta Jalan'}`, 'info');
 }
 
-function resetView() { if (map) { map.setView([-7.090, 111.650], 12); showToast('Tampilan direset', 'info'); } }
+function resetView() { 
+    if (map) { 
+        map.setView([-7.200, 111.800], 12); 
+        showToast('Tampilan direset', 'info'); 
+    } 
+}
 
 function locateUser() { 
     if (!navigator.geolocation) { showToast('Geolokasi tidak didukung', 'error'); return; } 
@@ -524,18 +470,7 @@ function locateUser() {
 
 function toggleDarkMode() { 
     isDarkMode = !isDarkMode; 
-    const root = document.documentElement; 
-    if (isDarkMode) { 
-        root.style.setProperty('--bg', '#0B0F19'); 
-        root.style.setProperty('--bg2', '#111827'); 
-        root.style.setProperty('--text', '#F0F4F8'); 
-        root.style.setProperty('--text2', '#94A3B8'); 
-    } else { 
-        root.style.setProperty('--bg', '#F0F4F8'); 
-        root.style.setProperty('--bg2', '#FFFFFF'); 
-        root.style.setProperty('--text', '#1A2332'); 
-        root.style.setProperty('--text2', '#64748B'); 
-    } 
+    document.body.classList.toggle('light-mode', !isDarkMode);
     showToast(isDarkMode ? 'Mode gelap' : 'Mode terang', 'info'); 
     localStorage.setItem('darkMode', isDarkMode); 
 }
@@ -552,36 +487,59 @@ function showDetail(id) {
         const body = document.getElementById('bottomSheetBody'); 
         if (sheet && body) { 
             body.innerHTML = `
-                <div class="bs-header" style="display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--glass-border);">
+                <div style="display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--glass-border);">
                     <strong>${point.dusun}</strong>
-                    <span class="bs-status" style="color:${statusColor};background:${statusColor}20;padding:2px 12px;border-radius:20px;">${statusText}</span>
+                    <span style="color:${statusColor};background:${statusColor}20;padding:2px 12px;border-radius:20px;">${statusText}</span>
                 </div>
-                <div class="bs-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>Kecamatan</span><span>${point.kec || '-'}</span></div>
-                <div class="bs-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>Desa</span><span>${point.desa || '-'}</span></div>
-                <div class="bs-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>Populasi</span><span>${(point.populasi || 0).toLocaleString()} jiwa</span></div>
-                <div class="bs-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>Provider</span><span>${point.provider || '-'}</span></div>
-                <div class="bs-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>Elevasi</span><span>${point.elev || 0} mdpl</span></div>
-                <div class="bs-row" style="display:flex;justify-content:space-between;padding:8px 0;"><span>RSSI</span><span>${point.rssi || -70} dBm</span></div>
-                <div class="bs-note" style="padding:10px;background:rgba(255,255,255,0.04);border-radius:10px;margin:8px 0;font-style:italic;">${point.ket || 'Tidak ada keterangan'}</div>
-                <button class="bs-close" onclick="closeBottomSheet()" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text);cursor:pointer;margin-top:12px;">Tutup</button>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Kecamatan</span><span>${point.kec || '-'}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Desa</span><span>${point.desa || '-'}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Populasi</span><span>${(point.populasi || 0).toLocaleString()} jiwa</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Provider</span><span>${point.provider || '-'}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Elevasi</span><span>${point.elev || 0} mdpl</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>RSSI</span><span>${point.rssi || -70} dBm</span></div>
+                <div style="padding:10px;background:rgba(255,255,255,0.04);border-radius:10px;margin:8px 0;">${point.ket || 'Tidak ada keterangan'}</div>
+                <button onclick="closeBottomSheet()" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text);cursor:pointer;margin-top:12px;">Tutup</button>
             `; 
             sheet.classList.add('open'); 
         } 
     } else { 
-        alert(`Dusun: ${point.dusun}\nDesa: ${point.desa}\nKecamatan: ${point.kec}\nStatus: ${statusText}\nProvider: ${point.provider}\nPopulasi: ${(point.populasi || 0).toLocaleString()} jiwa\nElevasi: ${point.elev} mdpl\nRSSI: ${point.rssi} dBm\nKeterangan: ${point.ket}`); 
+        alert(`Dusun: ${point.dusun}\nDesa: ${point.desa}\nKecamatan: ${point.kec}\nStatus: ${statusText}\nProvider: ${point.provider}\nPopulasi: ${(point.populasi || 0).toLocaleString()} jiwa\nElevasi: ${point.elev} mdpl\nRSSI: ${point.rssi} dBm`); 
     } 
 }
 
-function closeBottomSheet() { const sheet = document.getElementById('bottomSheet'); if (sheet) sheet.classList.remove('open'); }
+function closeBottomSheet() { 
+    const sheet = document.getElementById('bottomSheet'); 
+    if (sheet) sheet.classList.remove('open'); 
+}
 
 function togglePanel(name) { 
     const panel = document.getElementById('panel-' + name); 
-    if (activePanel === name && panel) { panel.style.display = 'none'; activePanel = null; } 
-    else { document.querySelectorAll('.glass-panel').forEach(p => { if (p) p.style.display = 'none'; }); if (panel) panel.style.display = 'flex'; activePanel = name; } 
+    if (activePanel === name && panel) { 
+        panel.style.display = 'none'; 
+        activePanel = null; 
+    } else { 
+        document.querySelectorAll('.glass-panel').forEach(p => { if (p) p.style.display = 'none'; }); 
+        if (panel) panel.style.display = 'flex'; 
+        activePanel = name; 
+    } 
 }
 
-function toggleSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebarOverlay'); if (sidebar && overlay) { sidebar.classList.toggle('open'); overlay.classList.toggle('open'); } }
-function closeSidebar() { const sidebar = document.getElementById('sidebar'); const overlay = document.getElementById('sidebarOverlay'); if (sidebar && overlay) { sidebar.classList.remove('open'); overlay.classList.remove('open'); } }
+function toggleSidebar() { 
+    const sidebar = document.getElementById('sidebar'); 
+    const overlay = document.getElementById('sidebarOverlay'); 
+    if (sidebar && overlay) { 
+        sidebar.classList.toggle('open'); 
+        overlay.classList.toggle('open'); 
+    } 
+}
+function closeSidebar() { 
+    const sidebar = document.getElementById('sidebar'); 
+    const overlay = document.getElementById('sidebarOverlay'); 
+    if (sidebar && overlay) { 
+        sidebar.classList.remove('open'); 
+        overlay.classList.remove('open'); 
+    } 
+}
 
 function exportToCSV() { 
     if (filteredData.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
@@ -589,16 +547,16 @@ function exportToCSV() {
     const rows = filteredData.map(p => [p.id, p.kec, p.desa, p.dusun, p.lat, p.lng, p.status, p.rssi || 'N/A', p.provider, p.populasi, p.luas, p.elev, p.ket]); 
     const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n'); 
     const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv' }); 
-    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); 
-    link.download = `blank-spot-${new Date().toISOString().slice(0,10)}.csv`; 
-    link.click(); URL.revokeObjectURL(link.href); 
+    const link = document.createElement('a'); 
+    link.href = URL.createObjectURL(blob); 
+    link.download = `blank-spot-temayang-gondang-${new Date().toISOString().slice(0,10)}.csv`; 
+    link.click(); 
+    URL.revokeObjectURL(link.href); 
     showToast(`${filteredData.length} data diexport`, 'success'); 
 }
 
-// Initialize map and load data
+// Initialize map
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing map...');
-    
     // Setup map layers
     layers = { 
         satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
@@ -611,7 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }) 
     };
     
-    map = L.map('map', { zoomControl: false }).setView([-7.090, 111.650], 12);
+    map = L.map('map', { zoomControl: false }).setView([-7.200, 111.800], 12);
     layers.satellite.addTo(map);
     
     markerCluster = L.markerClusterGroup({ 
@@ -624,9 +582,9 @@ document.addEventListener('DOMContentLoaded', () => {
             if (count > 10) color = '#FF3B5C'; 
             else if (count > 5) color = '#FFD700'; 
             return L.divIcon({ 
-                html: `<div class="cluster-icon" style="background:${color};width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;position:relative;">
+                html: `<div style="background:${color};width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;position:relative;">
                         <span>${count}</span>
-                        <div class="cluster-pulse" style="position:absolute;width:100%;height:100%;border-radius:50%;animation:cluster-pulse 1.5s infinite;background:${color}"></div>
+                        <div style="position:absolute;width:100%;height:100%;border-radius:50%;animation:cluster-pulse 1.5s infinite;background:${color}"></div>
                       </div>`, 
                 className: 'marker-cluster-custom', 
                 iconSize: [42,42], 
@@ -635,23 +593,6 @@ document.addEventListener('DOMContentLoaded', () => {
         } 
     });
     map.addLayer(markerCluster);
-    
-    // Add boundary polygons
-    L.polygon([[-7.095,111.620],[-7.100,111.645],[-7.108,111.660],[-7.115,111.655],[-7.128,111.648],[-7.135,111.630],[-7.130,111.615],[-7.120,111.608],[-7.108,111.610],[-7.095,111.620]], { 
-        color:'#00AAFF', 
-        fillColor:'#00AAFF', 
-        fillOpacity:0.06, 
-        weight:2, 
-        dashArray:'8,4' 
-    }).addTo(map);
-    
-    L.polygon([[-7.072,111.640],[-7.073,111.670],[-7.085,111.695],[-7.098,111.690],[-7.107,111.680],[-7.108,111.660],[-7.100,111.645],[-7.095,111.620],[-7.080,111.625],[-7.072,111.640]], { 
-        color:'#FF6B35', 
-        fillColor:'#FF6B35', 
-        fillOpacity:0.06, 
-        weight:2, 
-        dashArray:'8,4' 
-    }).addTo(map);
     
     // Set active layer button
     const layerSat = document.getElementById('layerSat');
@@ -668,10 +609,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(() => fetchDataFromSheets(), 5 * 60 * 1000);
     
     // Fix map size
-    setTimeout(() => {
-        if (map) map.invalidateSize();
-        console.log('Map invalidated size');
-    }, 100);
+    setTimeout(() => { if (map) map.invalidateSize(); }, 100);
     
     // Close panels when clicking on map
     map.on('click', () => { 
@@ -687,8 +625,6 @@ document.addEventListener('DOMContentLoaded', () => {
             closeSidebar(); 
         } 
     });
-    
-    console.log('Map initialization complete');
 });
 
 // Export functions for global access
@@ -708,3 +644,4 @@ window.toggleDarkMode = toggleDarkMode;
 window.exportToCSV = exportToCSV;
 window.showDetail = showDetail;
 window.closeBottomSheet = closeBottomSheet;
+window.debouncedFilter = debouncedFilter;
