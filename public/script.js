@@ -33,7 +33,6 @@ const labelMap = {
 // ============================================
 
 // Kecamatan Temayang - 12 DESA
-// Perubahan: Hapus Sugihwaras, Tambah Papringan dan Pandantoyo
 const temayangDesa = [
     'Bakulan', 'Belun', 'Buntalan', 'Jono', 'Kedungsari', 
     'Kedungsumber', 'Ngujung', 'Pancur', 'Soko', 'Temayang',
@@ -43,7 +42,7 @@ const temayangDesa = [
 // Kecamatan Gondang - 7 DESA
 // Perubahan: Tambah Sengaten
 const gondangDesa = [
-    'Gondang', 'Jari', 'Krondonan', 'Pajeng', 'Pragelan', 'Sambongrejo', 'Sengaten'
+    'Gondang', 'Jari', 'Krondonan', 'Pajeng', 'Pragelan', 'Sambongrejo', 'Senganten'
 ];
 
 // ============================================
