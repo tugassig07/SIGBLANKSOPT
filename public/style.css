@@ -1,6 +1,6 @@
 /* ============================================
    SIG BLANK SPOT INTERNET 2026
-   MAIN STYLESHEET - COMPLETE VERSION
+   MAIN STYLESHEET - TEMAYANG & GONDANG
    ============================================ */
 
 :root {
@@ -58,7 +58,6 @@
 }
 
 /* Light Mode */
-[data-theme="light"],
 body.light-mode {
   --bg: #F0F4F8;
   --bg2: #FFFFFF;
@@ -101,7 +100,7 @@ html, body {
   overflow: hidden;
 }
 
-/* ========== SCROLLBAR ========== */
+/* Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -121,7 +120,7 @@ html, body {
   background: var(--accent);
 }
 
-/* ========== BACK TO HOME BUTTON ========== */
+/* Back to Home Button */
 .back-home-btn {
   position: fixed;
   top: 20px;
@@ -150,7 +149,7 @@ html, body {
   border-color: var(--accent);
 }
 
-/* ========== DATA STATUS BAR ========== */
+/* Data Status Bar */
 .data-status-bar {
   position: fixed;
   top: 16px;
@@ -237,10 +236,9 @@ html, body {
 .refresh-btn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--accent);
-  transform: rotate(180deg);
 }
 
-/* ========== TOP BAR ========== */
+/* Top Bar */
 .top-bar {
   position: fixed;
   top: 70px;
@@ -293,12 +291,6 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: gradient-shift 3s ease infinite;
-}
-
-@keyframes gradient-shift {
-  0%, 100% { background: linear-gradient(135deg, var(--accent), var(--purple)); }
-  50% { background: linear-gradient(135deg, var(--purple), var(--accent)); }
 }
 
 .brand-icon svg {
@@ -379,7 +371,7 @@ html, body {
   transform: scale(1.05);
 }
 
-/* ========== SIDEBAR ========== */
+/* Sidebar */
 .sidebar {
   position: fixed;
   top: 0;
@@ -503,7 +495,7 @@ html, body {
   color: var(--accent);
 }
 
-/* ========== STATS FLOAT CARDS ========== */
+/* Stats Float Cards */
 .stats-float {
   position: fixed;
   top: 138px;
@@ -572,7 +564,7 @@ html, body {
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ========== MAP CONTAINER ========== */
+/* Map Container */
 .map-container {
   position: absolute;
   top: 0;
@@ -588,7 +580,7 @@ html, body {
   background: #060D1F;
 }
 
-/* ========== MAP CONTROLS ========== */
+/* Map Controls */
 .map-controls {
   position: fixed;
   right: 20px;
@@ -638,7 +630,7 @@ html, body {
   margin: 4px 0;
 }
 
-/* ========== LOADING OVERLAY ========== */
+/* Loading Overlay */
 .loading-overlay {
   position: absolute;
   top: 0;
@@ -695,7 +687,7 @@ html, body {
   transition: width 0.1s linear;
 }
 
-/* ========== GLASS PANELS ========== */
+/* Glass Panels */
 .glass-panel {
   position: fixed;
   top: 138px;
@@ -840,24 +832,6 @@ html, body {
   color: var(--accent);
 }
 
-.chip-danger.active {
-  background: rgba(255, 59, 92, 0.15);
-  border-color: rgba(255, 59, 92, 0.4);
-  color: var(--danger);
-}
-
-.chip-warning.active {
-  background: rgba(255, 215, 0, 0.15);
-  border-color: rgba(255, 215, 0, 0.4);
-  color: var(--warning);
-}
-
-.chip-success.active {
-  background: rgba(57, 255, 20, 0.15);
-  border-color: rgba(57, 255, 20, 0.4);
-  color: var(--success);
-}
-
 /* Legend */
 .legend-list {
   display: flex;
@@ -923,7 +897,6 @@ html, body {
   border-color: var(--danger);
 }
 
-/* Filter Result */
 .filter-result {
   text-align: center;
   padding: 10px;
@@ -934,7 +907,7 @@ html, body {
   font-weight: 500;
 }
 
-/* ========== DONUT CHART ========== */
+/* Donut Chart */
 .donut-section {
   display: flex;
   align-items: center;
@@ -1117,7 +1090,7 @@ html, body {
   font-weight: 500;
 }
 
-/* ========== TOAST NOTIFICATIONS ========== */
+/* Toast Notifications */
 .toast-container {
   position: fixed;
   bottom: 24px;
@@ -1146,37 +1119,10 @@ html, body {
   border-left: 3px solid;
 }
 
-.toast-success {
-  border-left-color: var(--success);
-}
-
-.toast-success .toast-icon {
-  color: var(--success);
-}
-
-.toast-error {
-  border-left-color: var(--danger);
-}
-
-.toast-error .toast-icon {
-  color: var(--danger);
-}
-
-.toast-warning {
-  border-left-color: var(--warning);
-}
-
-.toast-warning .toast-icon {
-  color: var(--warning);
-}
-
-.toast-info {
-  border-left-color: var(--accent);
-}
-
-.toast-info .toast-icon {
-  color: var(--accent);
-}
+.toast-success { border-left-color: var(--success); }
+.toast-error { border-left-color: var(--danger); }
+.toast-warning { border-left-color: var(--warning); }
+.toast-info { border-left-color: var(--accent); }
 
 .toast.fade-out {
   animation: fadeOut 0.3s forwards;
@@ -1200,7 +1146,7 @@ html, body {
   }
 }
 
-/* ========== BOTTOM SHEET (Mobile) ========== */
+/* Bottom Sheet (Mobile) */
 .bottom-sheet {
   position: fixed;
   bottom: -100%;
@@ -1241,68 +1187,7 @@ html, body {
   font-size: 16px;
 }
 
-.bs-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--glass-border);
-  margin-bottom: 8px;
-}
-
-.bs-status {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-}
-
-.bs-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  font-size: 13px;
-  border-bottom: 1px solid var(--glass-border-light);
-}
-
-.bs-row span:first-child {
-  color: var(--text2);
-}
-
-.bs-row span:last-child {
-  font-weight: 500;
-}
-
-.bs-note {
-  padding: 10px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 10px;
-  margin: 8px 0;
-  font-style: italic;
-  font-size: 12px;
-  color: var(--text2);
-}
-
-.bs-close {
-  width: 100%;
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid var(--glass-border);
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-  margin-top: 12px;
-  font-weight: 500;
-  transition: var(--transition-fast);
-}
-
-.bs-close:hover {
-  background: rgba(255, 255, 255, 0.06);
-  border-color: var(--danger);
-  color: var(--danger);
-}
-
-/* ========== INFO BADGE ========== */
+/* Info Badge */
 .info-badge {
   position: fixed;
   left: 20px;
@@ -1342,7 +1227,7 @@ html, body {
   font-weight: 500;
 }
 
-/* ========== CUSTOM MARKER STYLES ========== */
+/* Custom Marker Styles */
 .custom-marker,
 .simple-marker {
   background: transparent !important;
@@ -1372,16 +1257,6 @@ html, body {
   backdrop-filter: blur(20px) !important;
 }
 
-.glass-popup .leaflet-popup-close-button {
-  color: var(--text2) !important;
-  font-size: 18px !important;
-  padding: 8px !important;
-}
-
-.glass-popup .leaflet-popup-close-button:hover {
-  color: var(--danger) !important;
-}
-
 /* Custom Tooltip */
 .custom-tooltip {
   background: var(--glass) !important;
@@ -1392,7 +1267,6 @@ html, body {
   font-size: 11px !important;
   padding: 6px 12px !important;
   font-weight: 500 !important;
-  box-shadow: var(--shadow-sm) !important;
 }
 
 /* Cluster Icon */
@@ -1470,90 +1344,60 @@ html, body {
   display: none !important;
 }
 
-/* ========== RESPONSIVE DESIGN ========== */
+/* Responsive Design */
 @media (max-width: 1024px) {
   .stats-float {
     gap: 8px;
   }
-  
   .stat-float-card {
     padding: 6px 12px;
   }
-  
   .stat-float-val {
     font-size: 18px;
   }
 }
 
 @media (max-width: 768px) {
-  /* Back to Home */
   .back-home-btn {
     top: auto;
     bottom: 20px;
     left: 20px;
     z-index: 1003;
   }
-  
-  /* Menu Toggle */
   .menu-toggle {
     display: flex;
   }
-  
-  /* Top Bar */
   .top-bar {
     top: 70px;
     width: calc(100% - 20px);
     padding: 8px 12px;
     gap: 10px;
   }
-  
   .brand-text span {
     display: none;
   }
-  
   .live-indicator {
     display: none;
   }
-  
-  .top-actions {
-    gap: 4px;
-  }
-  
-  .icon-btn {
-    width: 32px;
-    height: 32px;
-  }
-  
-  /* Stats Float */
   .stats-float {
     top: 130px;
     gap: 6px;
     width: 95%;
     flex-wrap: wrap;
   }
-  
   .stat-float-card {
     padding: 5px 10px;
     gap: 8px;
   }
-  
   .stat-float-icon {
     font-size: 18px;
   }
-  
   .stat-float-val {
     font-size: 16px;
   }
-  
   .stat-float-lbl {
     font-size: 8px;
   }
-  
-  .stat-float-bar {
-    width: 35px;
-  }
-  
-  /* Glass Panels */
   .glass-panel {
     right: 10px;
     left: 10px;
@@ -1562,8 +1406,6 @@ html, body {
     bottom: 80px;
     max-height: 55vh;
   }
-  
-  /* Map Controls */
   .map-controls {
     right: 10px;
     top: auto;
@@ -1574,39 +1416,25 @@ html, body {
     gap: 6px;
     padding: 6px;
   }
-  
   .map-control-btn {
     width: 38px;
     height: 38px;
   }
-  
-  /* Donut Chart */
   .donut-section {
     flex-direction: column;
     text-align: center;
   }
-  
-  .donut-chart {
-    margin-bottom: 10px;
-  }
-  
-  /* Stat Cards */
   .stat-cards-grid {
     grid-template-columns: 1fr;
   }
-  
-  /* Info Badge */
   .info-badge {
     display: none;
   }
-  
-  /* Data Status Bar */
   .data-status-bar {
     top: 10px;
     padding: 4px 12px;
     font-size: 10px;
   }
-  
   .last-update {
     display: none;
   }
@@ -1616,30 +1444,25 @@ html, body {
   .stats-float {
     gap: 4px;
   }
-  
   .stat-float-card {
     padding: 4px 8px;
   }
-  
   .stat-float-val {
     font-size: 14px;
   }
-  
   .brand-text h1 {
     font-size: 14px;
   }
-  
   .year-badge {
     font-size: 8px;
     padding: 1px 6px;
   }
-  
   .glass-panel-body {
     padding: 15px;
   }
 }
 
-/* ========== UTILITY CLASSES ========== */
+/* Utility Classes */
 .hidden {
   display: none !important;
 }
@@ -1658,48 +1481,4 @@ html, body {
 
 .text-success {
   color: var(--success);
-}
-
-.bg-accent {
-  background: linear-gradient(135deg, var(--accent), var(--purple));
-}
-
-/* Loading States */
-.loading-skeleton {
-  background: linear-gradient(90deg, var(--bg2) 25%, var(--bg3) 50%, var(--bg2) 75%);
-  background-size: 200% 100%;
-  animation: loading 1.5s infinite;
-}
-
-@keyframes loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
-}
-
-/* Print Styles */
-@media print {
-  .back-home-btn,
-  .data-status-bar,
-  .top-bar,
-  .stats-float,
-  .map-controls,
-  .glass-panel,
-  .info-badge,
-  .toast-container,
-  .bottom-sheet {
-    display: none !important;
-  }
-  
-  .map-container {
-    position: static;
-    height: 100%;
-  }
-  
-  #map {
-    height: 100%;
-  }
 }
