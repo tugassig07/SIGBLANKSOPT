@@ -1,5 +1,5 @@
 // ============================================
-// ADMIN PANEL - 
+// ADMIN PANEL - TEMAYANG & GONDANG, BOJONEGORO
 // ============================================
 
 let API_URL = 'https://script.google.com/macros/s/AKfycbxWL_zJ-TML_497iusMCgSPdgWsUWe0XqrcTJb_f-w-Ob0hAVbTSisWrd-EPAWLpTps_w/exec';
@@ -7,6 +7,15 @@ let pointsData = [];
 let isLoading = false;
 let renderTimeout = null;
 let statusChart = null;
+
+// Daftar Kecamatan
+const KECAMATAN_LIST = ['Temayang', 'Gondang'];
+
+// Daftar Desa per Kecamatan
+const DESA_LIST = {
+    Temayang: ['Bakulan', 'Belun', 'Buntalan', 'Jono', 'Kedungsari', 'Kedungsumber', 'Ngujung', 'Pancur', 'Soko', 'Temayang', 'Papringan', 'Pandantoyo'],
+    Gondang: ['Gondang', 'Jari', 'Krondonan', 'Pajeng', 'Pragelan', 'Sambongrejo', 'Sengaten']
+};
 
 // ========== MOBILE SIDEBAR ==========
 function initMobileSidebar() {
@@ -46,6 +55,42 @@ function initMobileSidebar() {
             statusChart.resize();
         }
     });
+}
+
+// ========== UPDATE DESA OPTIONS BASED ON KECAMATAN ==========
+function updateDesaOptions() {
+    const kecSelect = document.getElementById('kec');
+    const desaSelect = document.getElementById('desa');
+    
+    if (!kecSelect || !desaSelect) return;
+    
+    const selectedKec = kecSelect.value;
+    const desaList = DESA_LIST[selectedKec] || [];
+    
+    // Simpan nilai yang dipilih sebelumnya
+    const previousValue = desaSelect.value;
+    
+    // Kosongkan dan isi ulang opsi desa
+    desaSelect.innerHTML = '<option value="">Pilih Desa</option>';
+    desaList.forEach(desa => {
+        const option = document.createElement('option');
+        option.value = desa;
+        option.textContent = desa;
+        desaSelect.appendChild(option);
+    });
+    
+    // Kembalikan nilai sebelumnya jika masih ada
+    if (previousValue && desaList.includes(previousValue)) {
+        desaSelect.value = previousValue;
+    }
+}
+
+// Inisialisasi event listener untuk perubahan kecamatan
+function initDesaSelect() {
+    const kecSelect = document.getElementById('kec');
+    if (kecSelect) {
+        kecSelect.addEventListener('change', updateDesaOptions);
+    }
 }
 
 // ========== LOGIN ==========
@@ -200,24 +245,58 @@ function renderDashboard() {
     const baik = pointsData.filter(p => p.status === 'baik').length;
     const total = pointsData.length;
     
+    // Statistik per kecamatan
+    const temayangTotal = pointsData.filter(p => p.kec === 'Temayang').length;
+    const gondangTotal = pointsData.filter(p => p.kec === 'Gondang').length;
+    const temayangBlank = pointsData.filter(p => p.kec === 'Temayang' && p.status === 'blank').length;
+    const gondangBlank = pointsData.filter(p => p.kec === 'Gondang' && p.status === 'blank').length;
+    
     const statsGrid = document.getElementById('statsGrid');
     if (statsGrid) {
         statsGrid.innerHTML = `
-            <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div></div>
-            <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div></div>
-            <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div></div>
-            <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div></div>
-            <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div></div>
+            <div class="stat-card"><h4>Total Titik</h4><div class="number">${total}</div><div class="sub">19 Desa</div></div>
+            <div class="stat-card"><h4>Blank Spot</h4><div class="number" style="color:#dc2626">${blank}</div><div class="sub">Prioritas</div></div>
+            <div class="stat-card"><h4>Sinyal Lemah</h4><div class="number" style="color:#d97706">${lemah}</div><div class="sub">Perlu Perhatian</div></div>
+            <div class="stat-card"><h4>Sinyal Sedang</h4><div class="number" style="color:#ea580c">${sedang}</div><div class="sub">Cukup</div></div>
+            <div class="stat-card"><h4>Cakupan Baik</h4><div class="number" style="color:#059669">${baik}</div><div class="sub">Optimal</div></div>
+        `;
+    }
+    
+    // Update ringkasan kecamatan
+    const kecSummary = document.getElementById('kecamatanSummary');
+    if (kecSummary) {
+        kecSummary.innerHTML = `
+            <div class="kec-card" style="background:linear-gradient(135deg,#00AAFF20,#00AAFF05); border-left:4px solid #00AAFF;">
+                <h4><i class="fas fa-map-marker-alt" style="color:#00AAFF"></i> Kecamatan Temayang</h4>
+                <p><strong>${temayangTotal}</strong> titik survei | <strong style="color:#dc2626">${temayangBlank}</strong> blank spot</p>
+                <p style="font-size:12px; color:#64748B">12 Desa: Bakulan, Belun, Buntalan, Jono, Kedungsari, Kedungsumber, Ngujung, Pancur, Soko, Temayang, Papringan, Pandantoyo</p>
+            </div>
+            <div class="kec-card" style="background:linear-gradient(135deg,#FF6B3520,#FF6B3505); border-left:4px solid #FF6B35;">
+                <h4><i class="fas fa-map-marker-alt" style="color:#FF6B35"></i> Kecamatan Gondang</h4>
+                <p><strong>${gondangTotal}</strong> titik survei | <strong style="color:#dc2626">${gondangBlank}</strong> blank spot</p>
+                <p style="font-size:12px; color:#64748B">7 Desa: Gondang, Jari, Krondonan, Pajeng, Pragelan, Sambongrejo, Sengaten</p>
+            </div>
         `;
     }
 }
 
-// ========== CHART JS - DIPERBAIKI LABELNYA UNTUK MOBILE ==========
+// ========== CHART JS - DIPERBAIKI ==========
 function renderChart() {
     const blank = pointsData.filter(p => p.status === 'blank').length;
     const lemah = pointsData.filter(p => p.status === 'lemah').length;
     const sedang = pointsData.filter(p => p.status === 'sedang').length;
     const baik = pointsData.filter(p => p.status === 'baik').length;
+    
+    // Chart per kecamatan
+    const temayangBlank = pointsData.filter(p => p.kec === 'Temayang' && p.status === 'blank').length;
+    const temayangLemah = pointsData.filter(p => p.kec === 'Temayang' && p.status === 'lemah').length;
+    const temayangSedang = pointsData.filter(p => p.kec === 'Temayang' && p.status === 'sedang').length;
+    const temayangBaik = pointsData.filter(p => p.kec === 'Temayang' && p.status === 'baik').length;
+    
+    const gondangBlank = pointsData.filter(p => p.kec === 'Gondang' && p.status === 'blank').length;
+    const gondangLemah = pointsData.filter(p => p.kec === 'Gondang' && p.status === 'lemah').length;
+    const gondangSedang = pointsData.filter(p => p.kec === 'Gondang' && p.status === 'sedang').length;
+    const gondangBaik = pointsData.filter(p => p.kec === 'Gondang' && p.status === 'baik').length;
     
     const ctx = document.getElementById('statusChart');
     if (!ctx) return;
@@ -230,24 +309,30 @@ function renderChart() {
     
     const isMobile = window.innerWidth < 768;
     
-    // Label yang lebih pendek untuk mobile
-    const labels = isMobile 
-        ? ['Blank', 'Lemah', 'Sedang', 'Baik']
-        : ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'];
-    
     statusChart = new Chart(ctx2d, {
         type: 'bar',
         data: {
-            labels: labels,
-            datasets: [{
-                label: 'Jumlah Titik',
-                data: [blank, lemah, sedang, baik],
-                backgroundColor: ['#dc2626', '#d97706', '#ea580c', '#059669'],
-                borderRadius: 6,
-                borderWidth: 0,
-                barPercentage: isMobile ? 0.6 : 0.7,
-                categoryPercentage: isMobile ? 0.8 : 0.9
-            }]
+            labels: ['Blank Spot', 'Sinyal Lemah', 'Sinyal Sedang', 'Sinyal Baik'],
+            datasets: [
+                {
+                    label: 'Temayang',
+                    data: [temayangBlank, temayangLemah, temayangSedang, temayangBaik],
+                    backgroundColor: '#00AAFF',
+                    borderRadius: 6,
+                    borderWidth: 0,
+                    barPercentage: isMobile ? 0.6 : 0.7,
+                    categoryPercentage: isMobile ? 0.8 : 0.9
+                },
+                {
+                    label: 'Gondang',
+                    data: [gondangBlank, gondangLemah, gondangSedang, gondangBaik],
+                    backgroundColor: '#FF6B35',
+                    borderRadius: 6,
+                    borderWidth: 0,
+                    barPercentage: isMobile ? 0.6 : 0.7,
+                    categoryPercentage: isMobile ? 0.8 : 0.9
+                }
+            ]
         },
         options: {
             responsive: true,
@@ -360,21 +445,24 @@ function exportToExcel() {
         'Latitude': p.lat,
         'Longitude': p.lng,
         'Populasi': p.populasi,
-        'Provider': p.provider
+        'Provider': p.provider,
+        'Elevasi': p.elev,
+        'Keterangan': p.ket
     }));
     
     const ws = XLSX.utils.json_to_sheet(exportData);
     
     ws['!cols'] = [
         {wch: 5}, {wch: 20}, {wch: 20}, {wch: 15}, 
-        {wch: 15}, {wch: 12}, {wch: 12}, {wch: 10}, {wch: 12}
+        {wch: 15}, {wch: 12}, {wch: 12}, {wch: 10}, 
+        {wch: 12}, {wch: 8}, {wch: 25}
     ];
     
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Data Titik Survei');
     
     const now = new Date();
-    const filename = `SIG_BlankSpot_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}.xlsx`;
+    const filename = `SIG_BlankSpot_Temayang_Gondang_${now.getFullYear()}-${now.getMonth()+1}-${now.getDate()}.xlsx`;
     
     XLSX.writeFile(wb, filename);
     addLog(`✅ Export selesai: ${pointsData.length} data`, 'success');
@@ -387,7 +475,8 @@ function renderTable() {
         const search = document.getElementById('searchInput')?.value.toLowerCase() || '';
         const filtered = pointsData.filter(p => 
             p.dusun?.toLowerCase().includes(search) || 
-            p.desa?.toLowerCase().includes(search)
+            p.desa?.toLowerCase().includes(search) ||
+            p.kec?.toLowerCase().includes(search)
         );
         
         const tbody = document.getElementById('pointsTableBody');
@@ -414,7 +503,7 @@ function renderTable() {
                 <td>${p.id}</td>
                 <td>${escapeHtml(p.dusun || '-')}</td>
                 <td>${escapeHtml(p.desa || '-')}</td>
-                <td>${escapeHtml(p.kec || '-')}</td>
+                <td><span class="kec-badge" style="${p.kec === 'Temayang' ? 'background:#00AAFF20;color:#00AAFF' : 'background:#FF6B3520;color:#FF6B35'}">${escapeHtml(p.kec || '-')}</span></td>
                 <td><span class="badge-status badge-${p.status}">${getStatusText(p.status)}</span></td>
                 <td>${p.populasi || 0}</td>
                 <td>${escapeHtml(p.provider || '-')}</td>
@@ -494,13 +583,23 @@ function editPoint(id) {
     document.getElementById('editId').value = point.id;
     document.getElementById('dusun').value = point.dusun || '';
     document.getElementById('desa').value = point.desa || '';
-    document.getElementById('kec').value = point.kec || 'Kedewan';
+    document.getElementById('kec').value = point.kec || 'Temayang';
     document.getElementById('status').value = point.status || 'blank';
     document.getElementById('lat').value = point.lat || 0;
     document.getElementById('lng').value = point.lng || 0;
     document.getElementById('populasi').value = point.populasi || 0;
     document.getElementById('provider').value = point.provider || '';
+    document.getElementById('elevasi').value = point.elev || 0;
+    document.getElementById('keterangan').value = point.ket || '';
     document.getElementById('modalTitle').innerText = 'Edit Titik';
+    
+    // Update desa options berdasarkan kecamatan yang dipilih
+    updateDesaOptions();
+    // Set desa setelah options diperbarui
+    setTimeout(() => {
+        if (point.desa) document.getElementById('desa').value = point.desa;
+    }, 10);
+    
     document.getElementById('pointModal').style.display = 'flex';
 }
 
@@ -644,10 +743,18 @@ async function pushData() {
 
 async function addSampleData() {
     const samples = [
-        { dusun: 'Dk. Ngrowo', desa: 'Kedewan', kec: 'Kedewan', status: 'blank', lat: -7.105, lng: 111.63, populasi: 1250, provider: 'Telkomsel' },
-        { dusun: 'Dk. Sumberjo', desa: 'Kedewan', kec: 'Kedewan', status: 'lemah', lat: -7.108, lng: 111.635, populasi: 850, provider: 'XL' },
-        { dusun: 'Dk. Krajan', desa: 'Kasiman', kec: 'Kasiman', status: 'sedang', lat: -7.112, lng: 111.64, populasi: 2100, provider: 'Indosat' },
-        { dusun: 'Dk. Ngepung', desa: 'Kasiman', kec: 'Kasiman', status: 'baik', lat: -7.115, lng: 111.645, populasi: 3200, provider: 'Telkomsel' }
+        // Kecamatan Temayang
+        { dusun: 'Dk. Krajan', desa: 'Temayang', kec: 'Temayang', status: 'blank', lat: -7.3650, lng: 111.8950, populasi: 1250, provider: 'Telkomsel' },
+        { dusun: 'Dk. Soko', desa: 'Soko', kec: 'Temayang', status: 'blank', lat: -7.422083, lng: 111.929442, populasi: 2150, provider: 'Indosat' },
+        { dusun: 'Dk. Kedungsumber', desa: 'Kedungsumber', kec: 'Temayang', status: 'blank', lat: -7.348792, lng: 111.902089, populasi: 1820, provider: 'Telkomsel' },
+        { dusun: 'Dk. Papringan', desa: 'Papringan', kec: 'Temayang', status: 'lemah', lat: -7.3480, lng: 111.8600, populasi: 950, provider: 'XL' },
+        { dusun: 'Dk. Pandantoyo', desa: 'Pandantoyo', kec: 'Temayang', status: 'sedang', lat: -7.3380, lng: 111.8750, populasi: 2100, provider: 'Telkomsel' },
+        
+        // Kecamatan Gondang
+        { dusun: 'Dk. Jari', desa: 'Jari', kec: 'Gondang', status: 'blank', lat: -7.405636, lng: 111.817664, populasi: 1950, provider: 'XL' },
+        { dusun: 'Dk. Pragelan', desa: 'Pragelan', kec: 'Gondang', status: 'lemah', lat: -7.395694, lng: 111.792511, populasi: 1650, provider: 'Telkomsel' },
+        { dusun: 'Dk. Sengaten', desa: 'Sengaten', kec: 'Gondang', status: 'sedang', lat: -7.3650, lng: 111.8000, populasi: 1100, provider: 'Indosat' },
+        { dusun: 'Dk. Gondang', desa: 'Gondang', kec: 'Gondang', status: 'baik', lat: -7.3850, lng: 111.8350, populasi: 2850, provider: 'Telkomsel' }
     ];
     
     addLog('📝 Menambah sample data...', 'info');
@@ -702,6 +809,8 @@ function initEventListeners() {
             document.getElementById('pointForm').reset();
             document.getElementById('editId').value = '';
             document.getElementById('modalTitle').innerText = 'Tambah Titik';
+            document.getElementById('kec').value = 'Temayang';
+            updateDesaOptions(); // Update desa options berdasarkan kecamatan default
             document.getElementById('pointModal').style.display = 'flex';
         });
     }
@@ -726,11 +835,13 @@ function initEventListeners() {
                 lat: parseFloat(document.getElementById('lat').value),
                 lng: parseFloat(document.getElementById('lng').value),
                 populasi: parseInt(document.getElementById('populasi').value) || 0,
-                provider: document.getElementById('provider').value
+                provider: document.getElementById('provider').value,
+                elev: parseInt(document.getElementById('elevasi').value) || 0,
+                ket: document.getElementById('keterangan').value || ''
             };
             
             if (!data.dusun || !data.desa || !data.lat || !data.lng) {
-                addLog('❌ Lengkapi semua field', 'error');
+                addLog('❌ Lengkapi semua field (Dusun, Desa, Lat, Lng)', 'error');
                 return;
             }
             
@@ -826,12 +937,14 @@ if (apiUrlInput) apiUrlInput.value = API_URL;
 
 initMobileSidebar();
 initEventListeners();
+initDesaSelect(); // Initialize desa select listener
 
 if (!checkLogin()) {
     document.getElementById('loginPage').style.display = 'flex';
     document.getElementById('adminApp').style.display = 'none';
 }
 
+// Export functions for global access
 window.editPoint = editPoint;
 window.deletePoint = deletePoint;
 window.testConnection = testConnection;
