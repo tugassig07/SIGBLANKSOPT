@@ -199,7 +199,7 @@ body {
     font-weight: bold;
 }
 
-/* ========== CHART RESPONSIVE ========== */
+/* ========== CHART ========== */
 .chart-card {
     padding: 16px;
 }
@@ -223,15 +223,16 @@ body {
     background: white;
     border-radius: 20px;
     border: 1px solid #e2e8f0;
-    padding: 20px;
     margin-bottom: 20px;
+    overflow: hidden;
 }
 
 .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
     flex-wrap: wrap;
     gap: 10px;
 }
@@ -285,6 +286,7 @@ body {
 /* ========== TABLE ========== */
 .table-wrapper {
     overflow-x: auto;
+    padding: 0 20px 20px;
 }
 
 .data-table {
@@ -304,7 +306,7 @@ body {
     color: #00b4d4;
 }
 
-/* ========== BADGE STATUS - DIPERBAIKI UNTUK MOBILE ========== */
+/* ========== BADGE STATUS ========== */
 .badge-status {
     display: inline-block;
     padding: 4px 8px;
@@ -316,7 +318,6 @@ body {
     min-width: 70px;
 }
 
-/* Ukuran badge lebih kecil di mobile */
 @media (max-width: 768px) {
     .badge-status {
         padding: 3px 6px;
@@ -329,6 +330,27 @@ body {
 .badge-lemah { background: #fef3c7; color: #d97706; }
 .badge-sedang { background: #ffedd5; color: #ea580c; }
 .badge-baik { background: #d1fae5; color: #059669; }
+
+/* Badge Kecamatan */
+.kec-badge-temayang {
+    background: rgba(0, 170, 255, 0.15);
+    color: #00AAFF;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.kec-badge-gondang {
+    background: rgba(255, 107, 53, 0.15);
+    color: #FF6B35;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-block;
+}
 
 .action-icons i {
     margin: 0 5px;
@@ -360,7 +382,7 @@ body {
     background: white;
     border-radius: 24px;
     padding: 30px;
-    width: 450px;
+    width: 500px;
     max-width: 90%;
     max-height: 90vh;
     overflow-y: auto;
@@ -370,7 +392,7 @@ body {
     margin-bottom: 20px;
 }
 
-.modal-content input, .modal-content select {
+.modal-content input, .modal-content select, .modal-content textarea {
     width: 100%;
     padding: 12px;
     margin-bottom: 12px;
@@ -379,7 +401,7 @@ body {
     font-size: 14px;
 }
 
-.modal-content input:focus, .modal-content select:focus {
+.modal-content input:focus, .modal-content select:focus, .modal-content textarea:focus {
     outline: none;
     border-color: #00d4ff;
     box-shadow: 0 0 0 2px rgba(0,212,255,0.2);
@@ -430,14 +452,6 @@ body {
 .log-error { color: #dc2626; }
 .log-info { color: #64748b; }
 
-.badge {
-    display: inline-block;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    background: #e2e8f0;
-}
-
 .form-group {
     margin-bottom: 15px;
 }
@@ -454,9 +468,8 @@ hr {
     border-color: #e2e8f0;
 }
 
-/* ========== RESPONSIVE MOBILE ========== */
+/* ========== RESPONSIVE ========== */
 @media (max-width: 768px) {
-    /* Sidebar jadi overlay di mobile */
     .sidebar {
         position: fixed;
         left: -280px;
@@ -520,7 +533,6 @@ hr {
         padding: 5px 10px;
     }
     
-    /* Stat grid 2 kolom di mobile */
     .stats-grid {
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
@@ -538,11 +550,6 @@ hr {
         font-size: 11px;
     }
     
-    /* CHART - perbaikan untuk mobile */
-    .chart-card {
-        padding: 12px;
-    }
-    
     .chart-container {
         min-height: 220px;
         max-height: 260px;
@@ -552,7 +559,6 @@ hr {
         max-height: 220px !important;
     }
     
-    /* Card header vertical di mobile */
     .card-header {
         flex-direction: column;
         align-items: stretch;
@@ -586,7 +592,6 @@ hr {
         justify-content: center;
     }
     
-    /* Perbaikan teks tabel di mobile */
     .data-table th, .data-table td {
         padding: 8px 6px;
         font-size: 11px;
@@ -602,7 +607,6 @@ hr {
     }
 }
 
-/* ========== TABLET ========== */
 @media (min-width: 769px) and (max-width: 1024px) {
     .stats-grid {
         grid-template-columns: repeat(3, 1fr);
