@@ -28,33 +28,108 @@ const labelMap = {
     baik: 'Sinyal Baik' 
 };
 
-// Kecamatan Boundaries (Polygon coordinates for Temayang and Gondang)
-// These are approximate boundaries based on geographic location of Bojonegoro
-const kecamatanBoundaries = {
-    Temayang: [
-        [-7.285, 111.850],  // Utara Timur
-        [-7.290, 111.870],
-        [-7.305, 111.875],
-        [-7.320, 111.865],
-        [-7.325, 111.850],
-        [-7.318, 111.835],
-        [-7.305, 111.828],
-        [-7.295, 111.830],
-        [-7.285, 111.850]
-    ],
-    Gondang: [
-        [-7.340, 111.810],  // Selatan
-        [-7.348, 111.828],
-        [-7.355, 111.845],
-        [-7.350, 111.860],
-        [-7.335, 111.865],
-        [-7.320, 111.858],
-        [-7.312, 111.842],
-        [-7.318, 111.825],
-        [-7.330, 111.815],
-        [-7.340, 111.810]
-    ]
+// ============================================
+// DAFTAR DESA PER KECAMATAN
+// ============================================
+
+// Kecamatan Temayang (12 desa)
+const temayangDesa = [
+    'Bakulan', 'Belun', 'Buntalan', 'Jono', 'Kedungsari', 
+    'Kedungsumber', 'Ngujung', 'Pancur', 'Soko', 'Sugihwaras', 'Temayang'
+];
+
+// Kecamatan Gondang (7 desa)
+const gondangDesa = [
+    'Gondang', 'Jari', 'Krondonan', 'Pajeng', 'Pragelan', 'Sambongrejo'
+];
+
+// ============================================
+// KOORDINAT REFERENSI DESA (Latitude, Longitude)
+// Berdasarkan data dari gambar dan estimasi geografis
+// ============================================
+
+// Koordinat desa di Kecamatan Temayang
+const temayangCoordinates = {
+    // Data dari gambar
+    Soko: { lat: -7.422083, lng: 111.929442 },           // 7°25'19.50"S, 111°55'45.99"E
+    Kedungsumber: { lat: -7.348792, lng: 111.902089 },    // 7°20'55.65"S, 111°54'7.52"E
+    
+    // Estimasi koordinat desa lainnya di Temayang
+    Bakulan: { lat: -7.355000, lng: 111.885000 },
+    Belun: { lat: -7.368000, lng: 111.878000 },
+    Buntalan: { lat: -7.382000, lng: 111.890000 },
+    Jono: { lat: -7.395000, lng: 111.898000 },
+    Kedungsari: { lat: -7.338000, lng: 111.895000 },
+    Ngujung: { lat: -7.372000, lng: 111.910000 },
+    Pancur: { lat: -7.405000, lng: 111.915000 },
+    Sugihwaras: { lat: -7.358000, lng: 111.870000 },
+    Temayang: { lat: -7.365000, lng: 111.895000 }
 };
+
+// Koordinat desa di Kecamatan Gondang
+const gondangCoordinates = {
+    // Data dari gambar
+    Jari: { lat: -7.405636, lng: 111.817664 },            // 7°24'20.29"S, 111°49'3.59"E
+    Pragelan: { lat: -7.395694, lng: 111.792511 },        // 7°23'45.70"S, 111°47'33.04"E
+    
+    // Estimasi koordinat desa lainnya di Gondang
+    Gondang: { lat: -7.385000, lng: 111.835000 },
+    Krondonan: { lat: -7.378000, lng: 111.845000 },
+    Pajeng: { lat: -7.392000, lng: 111.825000 },
+    Sambongrejo: { lat: -7.370000, lng: 111.810000 }
+};
+
+// ============================================
+// MEMBANGUN POLYGON BATAS WILAYAH
+// Berdasarkan titik-titik ekstrim dari koordinat desa
+// ============================================
+
+// Fungsi untuk mendapatkan batas polygon dari kumpulan koordinat
+function getPolygonFromCoordinates(coords) {
+    const points = Object.values(coords);
+    if (points.length === 0) return [];
+    
+    // Cari titik ekstrim untuk membuat polygon perkiraan
+    let lats = points.map(p => p.lat);
+    let lngs = points.map(p => p.lng);
+    
+    let minLat = Math.min(...lats);
+    let maxLat = Math.max(...lats);
+    let minLng = Math.min(...lngs);
+    let maxLng = Math.max(...lngs);
+    
+    // Buat polygon persegi panjang yang membatasi area desa-desa
+    // Dengan sedikit ekspansi untuk batas wilayah
+    const expand = 0.015; // ekspansi sekitar 1.5 km
+    
+    return [
+        [minLat - expand, minLng - expand],  // Barat Laut
+        [minLat - expand, maxLng + expand],  // Timur Laut
+        [maxLat + expand, maxLng + expand],  // Timur Selatan
+        [maxLat + expand, minLng - expand],  // Barat Selatan
+        [minLat - expand, minLng - expand]   // Kembali ke titik awal
+    ];
+}
+
+// Polygon untuk Kecamatan Temayang
+const temayangPolygonPoints = getPolygonFromCoordinates(temayangCoordinates);
+
+// Polygon untuk Kecamatan Gondang
+const gondangPolygonPoints = getPolygonFromCoordinates(gondangCoordinates);
+
+// Fungsi untuk mendapatkan titik tengah polygon (untuk label)
+function getPolygonCenter(polygon) {
+    if (!polygon || polygon.length === 0) return { lat: 0, lng: 0 };
+    let sumLat = 0, sumLng = 0;
+    for (let i = 0; i < polygon.length - 1; i++) {
+        sumLat += polygon[i][0];
+        sumLng += polygon[i][1];
+    }
+    return {
+        lat: sumLat / (polygon.length - 1),
+        lng: sumLng / (polygon.length - 1)
+    };
+}
 
 // Toast notification
 function showToast(msg, type = 'success') {
@@ -98,8 +173,10 @@ function addBoundaryPolygons() {
     });
     boundaryLayers = [];
     
-    // Add Temayang boundary (Blue)
-    const temayangPolygon = L.polygon(kecamatanBoundaries.Temayang, {
+    // ============================================
+    // POLYGON KECAMATAN TEMAYANG
+    // ============================================
+    const temayangPolygon = L.polygon(temayangPolygonPoints, {
         color: '#00AAFF',
         fillColor: '#00AAFF',
         fillOpacity: 0.08,
@@ -107,16 +184,42 @@ function addBoundaryPolygons() {
         dashArray: '6, 3',
         className: 'kecamatan-polygon'
     }).bindPopup(`
-        <div style="text-align:center;">
-            <strong style="color:#00AAFF;">Kecamatan Temayang</strong><br>
-            <span style="font-size:11px;">Wilayah Administrasi</span>
+        <div style="text-align:center; min-width:180px;">
+            <strong style="color:#00AAFF; font-size:14px;">🏘️ Kecamatan Temayang</strong><br>
+            <span style="font-size:11px;">12 Desa</span><br>
+            <hr style="margin:8px 0; border-color:rgba(255,255,255,0.1);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px; font-size:10px; text-align:left;">
+                <span>• Bakulan</span><span>• Kedungsumber</span>
+                <span>• Belun</span><span>• Ngujung</span>
+                <span>• Buntalan</span><span>• Pancur</span>
+                <span>• Jono</span><span>• Soko</span>
+                <span>• Kedungsari</span><span>• Sugihwaras</span>
+                <span colspan="2">• Temayang</span>
+            </div>
         </div>
     `);
     temayangPolygon.addTo(map);
     boundaryLayers.push(temayangPolygon);
     
-    // Add Gondang boundary (Orange)
-    const gondangPolygon = L.polygon(kecamatanBoundaries.Gondang, {
+    // Label untuk Temayang
+    const temayangCenter = getPolygonCenter(temayangPolygonPoints);
+    const temayangLabel = L.marker([temayangCenter.lat, temayangCenter.lng], {
+        icon: L.divIcon({
+            className: 'kecamatan-label',
+            html: `<div style="background:rgba(0,170,255,0.9); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+                    📍 Kec. Temayang (12 Desa)
+                   </div>`,
+            iconSize: [160, 24],
+            iconAnchor: [80, 12]
+        })
+    });
+    temayangLabel.addTo(map);
+    boundaryLayers.push(temayangLabel);
+    
+    // ============================================
+    // POLYGON KECAMATAN GONDANG
+    // ============================================
+    const gondangPolygon = L.polygon(gondangPolygonPoints, {
         color: '#FF6B35',
         fillColor: '#FF6B35',
         fillOpacity: 0.08,
@@ -124,15 +227,39 @@ function addBoundaryPolygons() {
         dashArray: '6, 3',
         className: 'kecamatan-polygon'
     }).bindPopup(`
-        <div style="text-align:center;">
-            <strong style="color:#FF6B35;">Kecamatan Gondang</strong><br>
-            <span style="font-size:11px;">Wilayah Administrasi</span>
+        <div style="text-align:center; min-width:160px;">
+            <strong style="color:#FF6B35; font-size:14px;">🏘️ Kecamatan Gondang</strong><br>
+            <span style="font-size:11px;">7 Desa</span><br>
+            <hr style="margin:8px 0; border-color:rgba(255,255,255,0.1);">
+            <div style="font-size:10px; text-align:left;">
+                • Gondang<br>
+                • Jari<br>
+                • Krondonan<br>
+                • Pajeng<br>
+                • Pragelan<br>
+                • Sambongrejo
+            </div>
         </div>
     `);
     gondangPolygon.addTo(map);
     boundaryLayers.push(gondangPolygon);
     
-    console.log('Boundary polygons added for Temayang and Gondang');
+    // Label untuk Gondang
+    const gondangCenter = getPolygonCenter(gondangPolygonPoints);
+    const gondangLabel = L.marker([gondangCenter.lat, gondangCenter.lng], {
+        icon: L.divIcon({
+            className: 'kecamatan-label',
+            html: `<div style="background:rgba(255,107,53,0.9); padding:4px 12px; border-radius:20px; font-size:11px; font-weight:bold; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.3);">
+                    📍 Kec. Gondang (7 Desa)
+                   </div>`,
+            iconSize: [150, 24],
+            iconAnchor: [75, 12]
+        })
+    });
+    gondangLabel.addTo(map);
+    boundaryLayers.push(gondangLabel);
+    
+    console.log('Boundary polygons added for Temayang (12 desa) and Gondang (7 desa)');
 }
 
 // Fetch data from Google Sheets
@@ -178,11 +305,13 @@ async function fetchDataFromSheets() {
             updateStatusBar('success', `${pointsData.length} titik siap`);
             showToast(`Berhasil mengambil ${pointsData.length} data`, 'success');
         } else {
-            pointsData = [];
-            filteredData = [];
+            // Data dummy untuk demo
+            pointsData = getDemoData();
+            filteredData = [...pointsData];
             updateUI();
-            renderMarkers([]);
-            updateStatusBar('warning', 'Belum ada data (kosong)');
+            renderMarkers(filteredData);
+            updateStatusBar('warning', 'Menggunakan data demo');
+            showToast('Menggunakan data demo untuk preview', 'warning');
         }
         
         const lastUpdateSpan = document.getElementById('lastUpdate');
@@ -201,16 +330,91 @@ async function fetchDataFromSheets() {
             updateStatusBar('warning', 'Menggunakan data cache');
             showToast('Gagal mengambil data baru, menggunakan cache', 'warning');
         } else {
-            pointsData = [];
-            filteredData = [];
+            pointsData = getDemoData();
+            filteredData = [...pointsData];
             updateUI();
-            renderMarkers([]);
-            updateStatusBar('error', 'Gagal mengambil data');
-            showToast('Gagal mengambil data dari server', 'error');
+            renderMarkers(filteredData);
+            updateStatusBar('warning', 'Menggunakan data demo');
+            showToast('Gagal mengambil data, menggunakan data demo', 'warning');
         }
     } finally {
         setTimeout(() => { if (overlay) overlay.style.display = 'none'; }, 500);
     }
+}
+
+// Data demo berdasarkan desa-desa yang ada
+function getDemoData() {
+    const demos = [];
+    let id = 1;
+    
+    // Data untuk desa di Temayang
+    const temayangStatuses = {
+        'Soko': 'blank',
+        'Kedungsumber': 'blank',
+        'Temayang': 'sedang',
+        'Bakulan': 'lemah',
+        'Belun': 'baik',
+        'Buntalan': 'lemah',
+        'Jono': 'sedang',
+        'Kedungsari': 'baik',
+        'Ngujung': 'blank',
+        'Pancur': 'lemah',
+        'Sugihwaras': 'sedang'
+    };
+    
+    for (const [desa, coords] of Object.entries(temayangCoordinates)) {
+        const status = temayangStatuses[desa] || 'lemah';
+        demos.push({
+            id: id++,
+            kec: 'Temayang',
+            desa: desa,
+            dusun: desa,
+            lat: coords.lat,
+            lng: coords.lng,
+            status: status,
+            rssi: status === 'blank' ? -95 : status === 'lemah' ? -85 : status === 'sedang' ? -75 : -65,
+            provider: ['Telkomsel', 'Indosat', 'XL', 'Smartfren'][Math.floor(Math.random() * 4)],
+            populasi: Math.floor(1500 + Math.random() * 2000),
+            luas: `${(2 + Math.random() * 3).toFixed(1)} km²`,
+            elev: Math.floor(60 + Math.random() * 40),
+            ket: status === 'blank' ? 'Blankspot Area - Tidak ada sinyal GSM' : 
+                 status === 'lemah' ? 'Sinyal lemah, hanya 2G/3G tersedia' :
+                 status === 'sedang' ? 'Sinyal cukup, 4G tersedia' : 'Sinyal baik, 4G lancar'
+        });
+    }
+    
+    // Data untuk desa di Gondang
+    const gondangStatuses = {
+        'Jari': 'blank',
+        'Pragelan': 'lemah',
+        'Gondang': 'baik',
+        'Krondonan': 'sedang',
+        'Pajeng': 'lemah',
+        'Sambongrejo': 'baik'
+    };
+    
+    for (const [desa, coords] of Object.entries(gondangCoordinates)) {
+        const status = gondangStatuses[desa] || 'lemah';
+        demos.push({
+            id: id++,
+            kec: 'Gondang',
+            desa: desa,
+            dusun: desa,
+            lat: coords.lat,
+            lng: coords.lng,
+            status: status,
+            rssi: status === 'blank' ? -95 : status === 'lemah' ? -85 : status === 'sedang' ? -75 : -65,
+            provider: ['Telkomsel', 'Indosat', 'XL', 'Smartfren'][Math.floor(Math.random() * 4)],
+            populasi: Math.floor(1200 + Math.random() * 1800),
+            luas: `${(1.5 + Math.random() * 2.5).toFixed(1)} km²`,
+            elev: Math.floor(50 + Math.random() * 35),
+            ket: status === 'blank' ? 'Blankspot Area - Tidak ada sinyal GSM' : 
+                 status === 'lemah' ? 'Sinyal lemah, hanya 2G/3G tersedia' :
+                 status === 'sedang' ? 'Sinyal cukup, 4G tersedia' : 'Sinyal baik, 4G lancar'
+        });
+    }
+    
+    return demos;
 }
 
 async function refreshData() { 
@@ -231,6 +435,7 @@ function getMarkerColor(status) {
 function createMarkerIcon(status, kec) {
     const color = getMarkerColor(status);
     const size = status === 'blank' ? 32 : 28;
+    const borderColor = kec === 'Temayang' ? '#00AAFF' : '#FF6B35';
     
     const html = `
         <div style="
@@ -238,7 +443,7 @@ function createMarkerIcon(status, kec) {
             height: ${size}px;
             background: ${color};
             border-radius: 50%;
-            border: 3px solid white;
+            border: 3px solid ${borderColor};
             box-shadow: 0 2px 8px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
@@ -263,24 +468,28 @@ function createMarkerIcon(status, kec) {
 function popupContent(d) {
     const statusColor = getMarkerColor(d.status);
     const statusText = labelMap[d.status] || d.status;
+    const borderColor = d.kec === 'Temayang' ? '#00AAFF' : '#FF6B35';
     
     return `
-        <div style="min-width: 200px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <strong style="font-size:14px;">${d.dusun || 'Tidak bernama'}</strong>
+        <div style="min-width: 220px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:2px solid ${borderColor};padding-bottom:8px;">
+                <strong style="font-size:14px;">${d.dusun || d.desa || 'Tidak bernama'}</strong>
                 <span style="background:${statusColor}20;color:${statusColor};padding:2px 8px;border-radius:12px;font-size:10px;">
                     ${statusText}
                 </span>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
-                <div><span style="color:#64748B;font-size:10px;">Kecamatan</span><br><strong>${d.kec || '-'}</strong></div>
+                <div><span style="color:#64748B;font-size:10px;">Kecamatan</span><br><strong style="color:${borderColor};">${d.kec || '-'}</strong></div>
                 <div><span style="color:#64748B;font-size:10px;">Desa</span><br><strong>${d.desa || '-'}</strong></div>
                 <div><span style="color:#64748B;font-size:10px;">Populasi</span><br><strong>${(d.populasi || 0).toLocaleString()} jiwa</strong></div>
                 <div><span style="color:#64748B;font-size:10px;">Provider</span><br><strong>${d.provider || '-'}</strong></div>
                 <div><span style="color:#64748B;font-size:10px;">Elevasi</span><br><strong>${d.elev || 0} mdpl</strong></div>
                 <div><span style="color:#64748B;font-size:10px;">RSSI</span><br><strong>${d.rssi || -70} dBm</strong></div>
             </div>
-            <button onclick="showDetail(${d.id})" style="width:100%;padding:8px;border-radius:8px;border:1px solid #00D4FF;background:transparent;color:#00D4FF;cursor:pointer;">
+            <div style="padding:8px;background:rgba(0,0,0,0.3);border-radius:8px;margin-bottom:10px;font-size:11px;color:var(--text2);">
+                📝 ${d.ket || 'Tidak ada keterangan'}
+            </div>
+            <button onclick="showDetail(${d.id})" style="width:100%;padding:8px;border-radius:8px;border:1px solid ${borderColor};background:transparent;color:${borderColor};cursor:pointer;">
                 Lihat Detail →
             </button>
         </div>
@@ -300,8 +509,8 @@ function renderMarkers(data) {
         if (!d.lat || !d.lng || d.lat === 0 || d.lng === 0) return;
         const icon = createMarkerIcon(d.status, d.kec);
         const marker = L.marker([d.lat, d.lng], { icon: icon })
-            .bindPopup(popupContent(d), { maxWidth: 280, className: 'glass-popup' })
-            .bindTooltip(`${d.dusun} - ${labelMap[d.status]}`, { 
+            .bindPopup(popupContent(d), { maxWidth: 300, className: 'glass-popup' })
+            .bindTooltip(`${d.desa} - ${labelMap[d.status]}`, { 
                 direction: 'top', 
                 offset: [0, -15], 
                 className: 'custom-tooltip', 
@@ -309,6 +518,8 @@ function renderMarkers(data) {
             });
         markerCluster.addLayer(marker);
     });
+    
+    console.log(`Rendered ${data.length} markers`);
 }
 
 // Statistics and UI Updates
@@ -337,7 +548,7 @@ function updateStats(data) {
     const pcts = total > 0 ? [blank/total*100, lemah/total*100, sedang/total*100, baik/total*100] : [0,0,0,0];
     bars.forEach((bar, i) => { if (bar) bar.style.width = pcts[i] + '%'; });
     
-    // Update kecamatan stats (Temayang & Gondang)
+    // Update kecamatan stats
     const temayangBlank = data.filter(d => d.kec === 'Temayang' && d.status === 'blank').length;
     const gondangBlank = data.filter(d => d.kec === 'Gondang' && d.status === 'blank').length;
     const st = document.getElementById('s-temayang-blank'); if (st) st.textContent = temayangBlank;
@@ -383,16 +594,17 @@ function renderChart(data) {
         if (desas.length === 0) {
             container.innerHTML = `<div style="text-align: center; padding: 40px; color: var(--text3);">Belum ada data</div>`;
         } else {
-            container.innerHTML = desas.slice(0, 10).map(desa => {
+            container.innerHTML = desas.map(desa => {
                 const d = desaMap[desa];
                 const pct = Math.round((d.total / maxTotal) * 100);
+                const blankBadge = d.blank > 0 ? `<span style="background:#FF3B5C20;color:#FF3B5C;padding:0 6px;border-radius:10px;font-size:9px;margin-left:6px;">${d.blank} blank</span>` : '';
                 return `
                     <div class="bar-item">
                         <div class="bar-label" title="${desa}">${desa.length > 12 ? desa.substring(0,10)+'..' : desa}</div>
                         <div class="bar-track">
                             <div class="bar-fill" style="width:${pct}%;background:var(--accent)"></div>
                         </div>
-                        <div class="bar-count">${d.total}</div>
+                        <div class="bar-count">${d.total}${blankBadge}</div>
                     </div>
                 `;
             }).join('');
@@ -509,7 +721,7 @@ function setLayer(name, btn) {
 
 function resetView() { 
     if (map) { 
-        map.setView([-7.315, 111.840], 12); 
+        map.setView([-7.385, 111.860], 11); 
         showToast('Tampilan direset', 'info'); 
     } 
 }
@@ -554,29 +766,29 @@ function showDetail(id) {
     
     const statusColor = getMarkerColor(point.status);
     const statusText = labelMap[point.status];
+    const borderColor = point.kec === 'Temayang' ? '#00AAFF' : '#FF6B35';
     
     if (window.innerWidth <= 768) { 
         const sheet = document.getElementById('bottomSheet'); 
         const body = document.getElementById('bottomSheetBody'); 
         if (sheet && body) { 
             body.innerHTML = `
-                <div style="display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:1px solid var(--glass-border);">
-                    <strong>${point.dusun}</strong>
+                <div style="display:flex;justify-content:space-between;padding-bottom:12px;border-bottom:2px solid ${borderColor};">
+                    <strong>${point.desa}</strong>
                     <span style="color:${statusColor};background:${statusColor}20;padding:2px 12px;border-radius:20px;">${statusText}</span>
                 </div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Kecamatan</span><span>${point.kec || '-'}</span></div>
-                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Desa</span><span>${point.desa || '-'}</span></div>
+                <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Kecamatan</span><span style="color:${borderColor};">${point.kec || '-'}</span></div>
                 <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Populasi</span><span>${(point.populasi || 0).toLocaleString()} jiwa</span></div>
                 <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Provider</span><span>${point.provider || '-'}</span></div>
                 <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>Elevasi</span><span>${point.elev || 0} mdpl</span></div>
                 <div style="display:flex;justify-content:space-between;padding:8px 0;"><span>RSSI</span><span>${point.rssi || -70} dBm</span></div>
-                <div style="padding:10px;background:rgba(255,255,255,0.04);border-radius:10px;margin:8px 0;">${point.ket || 'Tidak ada keterangan'}</div>
+                <div style="padding:10px;background:rgba(255,255,255,0.04);border-radius:10px;margin:8px 0;">📝 ${point.ket || 'Tidak ada keterangan'}</div>
                 <button onclick="closeBottomSheet()" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--glass-border);background:transparent;color:var(--text);cursor:pointer;margin-top:12px;">Tutup</button>
             `; 
             sheet.classList.add('open'); 
         } 
     } else { 
-        alert(`Dusun: ${point.dusun}\nDesa: ${point.desa}\nKecamatan: ${point.kec}\nStatus: ${statusText}\nProvider: ${point.provider}\nPopulasi: ${(point.populasi || 0).toLocaleString()} jiwa\nElevasi: ${point.elev} mdpl\nRSSI: ${point.rssi} dBm`); 
+        alert(`📍 ${point.desa}\n🗺️ Kecamatan: ${point.kec}\n📡 Status: ${statusText}\n📱 Provider: ${point.provider}\n👥 Populasi: ${(point.populasi || 0).toLocaleString()} jiwa\n⛰️ Elevasi: ${point.elev} mdpl\n📶 RSSI: ${point.rssi} dBm\n📝 Keterangan: ${point.ket}`); 
     } 
 }
 
@@ -616,8 +828,8 @@ function closeSidebar() {
 
 function exportToCSV() { 
     if (filteredData.length === 0) { showToast('Tidak ada data untuk diexport', 'warning'); return; }
-    const headers = ['ID','Kecamatan','Desa','Dusun','Latitude','Longitude','Status','RSSI','Provider','Populasi','Luas','Elevasi','Keterangan']; 
-    const rows = filteredData.map(p => [p.id, p.kec, p.desa, p.dusun, p.lat, p.lng, p.status, p.rssi || 'N/A', p.provider, p.populasi, p.luas, p.elev, p.ket]); 
+    const headers = ['ID','Kecamatan','Desa','Latitude','Longitude','Status','RSSI','Provider','Populasi','Luas','Elevasi','Keterangan']; 
+    const rows = filteredData.map(p => [p.id, p.kec, p.desa, p.lat, p.lng, p.status, p.rssi || 'N/A', p.provider, p.populasi, p.luas, p.elev, p.ket]); 
     const csv = [headers.join(','), ...rows.map(r => r.map(v => `"${v}"`).join(','))].join('\n'); 
     const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv' }); 
     const link = document.createElement('a'); 
@@ -630,6 +842,8 @@ function exportToCSV() {
 
 // Initialize map
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing map for Temayang (12 desa) & Gondang (7 desa)...');
+    
     // Setup map layers
     layers = { 
         satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { 
@@ -642,7 +856,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }) 
     };
     
-    map = L.map('map', { zoomControl: false }).setView([-7.315, 111.840], 12);
+    map = L.map('map', { zoomControl: false }).setView([-7.385, 111.860], 11);
     layers.satellite.addTo(map);
     
     markerCluster = L.markerClusterGroup({ 
@@ -667,7 +881,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     map.addLayer(markerCluster);
     
-    // Add boundary polygons for Temayang and Gondang
+    // Add boundary polygons
     addBoundaryPolygons();
     
     // Set active layer button
@@ -701,6 +915,8 @@ document.addEventListener('DOMContentLoaded', () => {
             closeSidebar(); 
         } 
     });
+    
+    console.log('Map initialization complete');
 });
 
 // Export functions for global access
