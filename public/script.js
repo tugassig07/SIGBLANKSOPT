@@ -73,7 +73,7 @@ const gondangCoordinates = [
     { desa: 'Krondonan', lat: -7.378000, lng: 111.845000 },
     { desa: 'Pajeng', lat: -7.392000, lng: 111.825000 },
     { desa: 'Sambongrejo', lat: -7.370000, lng: 111.810000 },
-    { desa: 'Sengaten', lat: -7.365000, lng: 111.800000 }
+    { desa: 'Senganten', lat: -7.365000, lng: 111.800000 }
 ];
 
 // ============================================
