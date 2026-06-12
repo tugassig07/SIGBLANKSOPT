@@ -29,10 +29,10 @@ const labelMap = {
 };
 
 // ============================================
-// DAFTAR DESA PER KECAMATAN (UPDATED)
+// DAFTAR DESA PER KECAMATAN (JUMLAH BENAR)
 // ============================================
 
-// Kecamatan Temayang (13 desa)
+// Kecamatan Temayang - 12 DESA
 // Perubahan: Hapus Sugihwaras, Tambah Papringan dan Pandantoyo
 const temayangDesa = [
     'Bakulan', 'Belun', 'Buntalan', 'Jono', 'Kedungsari', 
@@ -40,7 +40,7 @@ const temayangDesa = [
     'Papringan', 'Pandantoyo'
 ];
 
-// Kecamatan Gondang (8 desa)
+// Kecamatan Gondang - 7 DESA
 // Perubahan: Tambah Sengaten
 const gondangDesa = [
     'Gondang', 'Jari', 'Krondonan', 'Pajeng', 'Pragelan', 'Sambongrejo', 'Sengaten'
@@ -50,7 +50,7 @@ const gondangDesa = [
 // KOORDINAT DESA (Titik referensi)
 // ============================================
 
-// Koordinat desa di Kecamatan Temayang
+// Koordinat desa di Kecamatan Temayang (12 desa)
 const temayangCoordinates = [
     { desa: 'Soko', lat: -7.422083, lng: 111.929442 },
     { desa: 'Kedungsumber', lat: -7.348792, lng: 111.902089 },
@@ -62,11 +62,11 @@ const temayangCoordinates = [
     { desa: 'Ngujung', lat: -7.372000, lng: 111.910000 },
     { desa: 'Pancur', lat: -7.405000, lng: 111.915000 },
     { desa: 'Temayang', lat: -7.365000, lng: 111.895000 },
-    { desa: 'Papringan', lat: -7.348000, lng: 111.860000 },      // Estimasi
-    { desa: 'Pandantoyo', lat: -7.338000, lng: 111.875000 }       // Estimasi
+    { desa: 'Papringan', lat: -7.348000, lng: 111.860000 },
+    { desa: 'Pandantoyo', lat: -7.338000, lng: 111.875000 }
 ];
 
-// Koordinat desa di Kecamatan Gondang
+// Koordinat desa di Kecamatan Gondang (7 desa)
 const gondangCoordinates = [
     { desa: 'Jari', lat: -7.405636, lng: 111.817664 },
     { desa: 'Pragelan', lat: -7.395694, lng: 111.792511 },
@@ -74,7 +74,7 @@ const gondangCoordinates = [
     { desa: 'Krondonan', lat: -7.378000, lng: 111.845000 },
     { desa: 'Pajeng', lat: -7.392000, lng: 111.825000 },
     { desa: 'Sambongrejo', lat: -7.370000, lng: 111.810000 },
-    { desa: 'Sengaten', lat: -7.365000, lng: 111.800000 }         // Estimasi
+    { desa: 'Sengaten', lat: -7.365000, lng: 111.800000 }
 ];
 
 // ============================================
@@ -125,18 +125,18 @@ function createCirclePolygon(center, radiusKm, points = 72) {
     return polygon;
 }
 
-// Hitung center dan radius untuk Temayang (13 desa)
+// Hitung center dan radius untuk Temayang (12 desa)
 const temayangCenter = getCenterPoint(temayangCoordinates);
 const temayangRadius = getRadius(temayangCoordinates, temayangCenter);
 const temayangCirclePoints = createCirclePolygon(temayangCenter, temayangRadius, 72);
 
-// Hitung center dan radius untuk Gondang (8 desa)
+// Hitung center dan radius untuk Gondang (7 desa)
 const gondangCenter = getCenterPoint(gondangCoordinates);
 const gondangRadius = getRadius(gondangCoordinates, gondangCenter);
 const gondangCirclePoints = createCirclePolygon(gondangCenter, gondangRadius, 72);
 
-console.log('Temayang (13 desa) - Center:', temayangCenter, 'Radius:', temayangRadius, 'km');
-console.log('Gondang (8 desa) - Center:', gondangCenter, 'Radius:', gondangRadius, 'km');
+console.log('Temayang (12 desa) - Center:', temayangCenter, 'Radius:', temayangRadius, 'km');
+console.log('Gondang (7 desa) - Center:', gondangCenter, 'Radius:', gondangRadius, 'km');
 
 // Toast notification
 function showToast(msg, type = 'success') {
@@ -181,7 +181,7 @@ function addBoundaryPolygons() {
     boundaryLayers = [];
     
     // ============================================
-    // LINGKARAN WILAYAH KECAMATAN TEMAYANG (13 DESA)
+    // LINGKARAN WILAYAH KECAMATAN TEMAYANG (12 DESA)
     // ============================================
     const temayangCircle = L.polygon(temayangCirclePoints, {
         color: '#00AAFF',
@@ -199,7 +199,7 @@ function addBoundaryPolygons() {
             </div>
             <div style="margin-bottom:12px;">
                 <span style="background:#00AAFF20; color:#00AAFF; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:500;">
-                    📊 TOTAL 13 DESA
+                    📊 TOTAL 12 DESA
                 </span>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:11px; max-height:220px; overflow-y:auto; padding-right:4px;">
@@ -228,7 +228,7 @@ function addBoundaryPolygons() {
     boundaryLayers.push(temayangLabel);
     
     // ============================================
-    // LINGKARAN WILAYAH KECAMATAN GONDANG (8 DESA)
+    // LINGKARAN WILAYAH KECAMATAN GONDANG (7 DESA)
     // ============================================
     const gondangCircle = L.polygon(gondangCirclePoints, {
         color: '#FF6B35',
@@ -246,7 +246,7 @@ function addBoundaryPolygons() {
             </div>
             <div style="margin-bottom:12px;">
                 <span style="background:#FF6B3520; color:#FF6B35; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:500;">
-                    📊 TOTAL 8 DESA
+                    📊 TOTAL 7 DESA
                 </span>
             </div>
             <div style="display:grid; grid-template-columns:1fr; gap:6px; font-size:11px; max-height:200px; overflow-y:auto; padding-right:4px;">
@@ -274,7 +274,7 @@ function addBoundaryPolygons() {
     gondangLabel.addTo(map);
     boundaryLayers.push(gondangLabel);
     
-    console.log('Circular boundaries added for Temayang (13 desa) and Gondang (8 desa)');
+    console.log('Circular boundaries added for Temayang (12 desa) and Gondang (7 desa)');
 }
 
 // Fetch data from Google Sheets
@@ -781,7 +781,7 @@ function exportToCSV() {
 
 // Initialize map
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Initializing map for Temayang (13 desa) & Gondang (8 desa)...');
+    console.log('Initializing map for Temayang (12 desa) & Gondang (7 desa)...');
     
     // Setup map layers
     layers = { 
